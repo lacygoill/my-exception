@@ -8,15 +8,26 @@ fu! exception#trace() abort
         return
     endif
 
-    let i = 0
-    let e = 0
+    let i      = 0
+    let e      = 0
     let errors = []
 
+    " iterate over the lines in the log
     while i < len(lines)
+
+        " if a line begins with “Error detected while processing function“
+        " and the previous one with “line 123“ (123 being a random number)
         if i > 1 && lines[i] =~# '^Error detected while processing function '
                     \ && lines[i-1] =~? '\v^line\s+\d+'
-            let lnum = matchstr(lines[i-1], '\d\+')
+
+            " get the line where the error occurred
+            let lnum  = matchstr(lines[i-1], '\d\+')
+
             let stack = printf('%s[%d]', lines[i][41:-2], lnum)
+"                                        │
+"                                        └─ name of the function
+"                                           the name begins after the 41th character,
+"                                           and `-2` gets rid of a colon at the end of the line
             call add(errors, {
                              \  'stack': reverse(split(stack, '\.\.')),
                              \  'msg':   lines[i-2],
@@ -26,6 +37,8 @@ fu! exception#trace() abort
 
         let i += 1
         if e && i - e > 3
+"          │
+"          └─ there has been at least an error
             break
         endif
     endwhile
@@ -38,7 +51,7 @@ fu! exception#trace() abort
 
     for err in errors
         let nw = len(len(err.stack))
-        let i = 0
+        let i  = 0
         call add(errlist, {
                           \   'text':  err.msg,
                           \   'lnum':  0,
