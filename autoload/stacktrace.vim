@@ -19,7 +19,7 @@
 " For more info:
 "         https://en.wikipedia.org/wiki/Stack_trace
 ""}}}
-" To test the exception#trace() function, install the following `cd` mapping "{{{
+" To test the stacktrace#qfl() function, install the following `cd` mapping "{{{
 " and the `FuncA()`, `FuncB()`, `FuncC()`, `FuncD()` functions:
 "
 "        nno cd :call FuncA()<cr>
@@ -44,9 +44,9 @@
 " Then, press `cd`, and execute `:WTF`.
 "
 ""}}}
-" exception#trace "{{{
+" stacktrace#qfl "{{{
 
-fu! exception#trace() abort
+fu! stacktrace#qfl() abort
 
     " TV for `errors`:
     "         [
