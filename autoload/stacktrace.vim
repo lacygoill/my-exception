@@ -46,7 +46,7 @@
 ""}}}
 " stacktrace#qfl "{{{
 
-fu! stacktrace#qfl() abort
+fu! stacktrace#qfl(...) abort
 
     " TV for `errors`:
     "         [
@@ -61,7 +61,7 @@ fu! stacktrace#qfl() abort
     " and the chains of calls were:
     "         FuncA → FuncB → s:FuncC
     "         FuncD → FuncE → s:FuncF
-    let errors = s:get_raw_trace()
+    let errors = s:get_raw_trace(get(a:000, 0, 3))
 
     " if there aren't any error, return
     if empty(errors)
@@ -226,7 +226,9 @@ endfu
 "}}}
 " get_raw_trace "{{{
 
-fu! s:get_raw_trace() abort
+fu! s:get_raw_trace(...) abort
+    let distance = get(a:000, 0, 3)
+
     " get the log messages
     let lines = reverse(split(execute('sil messages'), "\n"))
     "               │
@@ -307,11 +309,11 @@ fu! s:get_raw_trace() abort
 
         "  ┌─ there has been at least an error
         "  │
-        if e && i - e > 3
+        if e && i - e > distance
         "       └───────┤
-        "               └ there're more than 3 lines between the current line of the
-        "                 log, and the last one which contained a “Error detected
-        "                 while processing function“ message
+        "               └ there're more than `distance` lines between the current
+        "                 line of the log, and the last one which contained a
+        "                 “Error detected while processing function“ message
 
             " get out of the while loop because we're only interested in the last error
             break
@@ -333,11 +335,11 @@ fu! s:get_raw_trace() abort
             " 2 lines between 2 of them. Example:
             "
             "         Error detected while processing function foo   <+
-            "         line    12:                                     │ distance = 3 lines
-            "         E492: Not an editor command:     bar            │            │
-            "         Error detected while processing function baz   <+            └ that's where the 3,
-            "         line    34:                                                    in the `i - e > 3` condition,
-            "         E492: Not an editor command:     qux                           comes from
+            "         line    12:                                     │ distance
+            "         E492: Not an editor command:     bar            │
+            "         Error detected while processing function baz   <+
+            "         line    34:
+            "         E492: Not an editor command:     qux
             ""}}}
         endif
     endwhile

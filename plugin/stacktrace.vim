@@ -1,1 +1,1 @@
-com! WTF call stacktrace#qfl()
+com! -nargs=? WTF call stacktrace#qfl(<args>)
