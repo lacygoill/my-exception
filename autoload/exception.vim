@@ -178,17 +178,24 @@ fu! exception#trace() abort
                 endif
             endfor
 
-            let fname = fnamemodify(src, ':.')
-
-            " the value of the `text` key is a function call; ex:
-            "         'FuncA[12]'
+            " Finally, we can add an entry for the function call.
+            " We have its filename with `src`.
+            " We have its line address with `l:lnum`.
+            " And we can generate a simple text with:
             "
-            " … prefixed with its index in the stack trace and a dot; ex:
+            "                  ┌─ width of the digits
+            "                  │
+            "         printf('%*s. %s', digits, '#'.i, func_call),
+            "                 │    │
+            "                 │    └─ function call; ex: 'FuncA[12]'
+            "                 └─ index of the function call in the stack
+            "
+            " The final text could be sth like:
             "         '0. Func[12]'
 
             call add(qfl, {
                           \   'text':     printf('%*s. %s', digits, '#'.i, func_call),
-                          \   'filename': fname,
+                          \   'filename': src,
                           \   'lnum':     l:lnum,
                           \   'type':     'I',
                           \ })
@@ -203,12 +210,15 @@ fu! exception#trace() abort
                           " Technically, it probably has an influence on the `%t` item used in
                           " 'errorformat'.
 
+            " increment `i` to update the index of the next function call in
+            " the stack
             let i += 1
         endfor
     endfor
 
+    " populate the qfl
     if !empty(qfl)
-        call setqflist(qfl, 'r')
+        call setqflist(qfl)
         copen
     endif
 endfu
