@@ -3,7 +3,7 @@
 
 " Acronym used in the comments:
 "     TV = Typical Value
-"          example used to illustrate which kind of value could a variable store
+"          example used to illustrate which kind of value a variable could store
 
 " Definition of a stack trace: "{{{
 "
@@ -57,8 +57,8 @@ fu! stacktrace#qfl() abort
     "         \   'msg' :   'E492: Not an editor command:     efgh'},
     "         ]
     "
-    " In this fictitious example, the errors occurred in s:FuncC() and s:FuncF(),
-    " and the chains of calls are:
+    " In this fictitious example, 2 errors occurred in s:FuncC() and s:FuncF(),
+    " and the chains of calls were:
     "         FuncA → FuncB → s:FuncC
     "         FuncD → FuncE → s:FuncF
     let errors = s:get_raw_trace()
