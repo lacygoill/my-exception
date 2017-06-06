@@ -227,7 +227,7 @@ endfu
 " get_raw_trace "{{{
 
 fu! s:get_raw_trace(...) abort
-    let distance = get(a:000, 0, 3)
+    let max_dist = get(a:000, 0, 3)
 
     " get the log messages
     let lines = reverse(split(execute('sil messages'), "\n"))
@@ -309,9 +309,9 @@ fu! s:get_raw_trace(...) abort
 
         "  ┌─ there has been at least an error
         "  │
-        if e && i - e > distance
+        if e && i - e > max_dist
         "       └───────┤
-        "               └ there're more than `distance` lines between the current
+        "               └ there're more than `max_dist` lines between the current
         "                 line of the log, and the last one which contained a
         "                 “Error detected while processing function“ message
 
@@ -335,7 +335,7 @@ fu! s:get_raw_trace(...) abort
             " 2 lines between 2 of them. Example:
             "
             "         Error detected while processing function foo   <+
-            "         line    12:                                     │ distance
+            "         line    12:                                     │ max_dist
             "         E492: Not an editor command:     bar            │
             "         Error detected while processing function baz   <+
             "         line    34:
