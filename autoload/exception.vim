@@ -1,4 +1,11 @@
-" Definition of a stack trace:
+" Source:
+" https://github.com/tweekmonster/exception.vim/blob/ca36f1ecf5b4cea1206355e8e5e858512018a5db/autoload/exception.vim
+
+" Acronym used in the comments:
+"     TV = Typical Value
+"          example used to illustrate which kind of value could a variable store
+
+" Definition of a stack trace: "{{{
 "
 " Programmers  commonly use  stack  tracing during  interactive and  post-mortem
 " debugging.  End-users may  see a  stack trace  displayed as  part of  an error
@@ -11,32 +18,210 @@
 "
 " For more info:
 "         https://en.wikipedia.org/wiki/Stack_trace
-
-" To test the exception#trace() function, install the following `cd` mapping
-" and the `FuncA()`, `FuncB()`, `FuncC()` functions:
+""}}}
+" To test the exception#trace() function, install the following `cd` mapping "{{{
+" and the `FuncA()`, `FuncB()`, `FuncC()`, `FuncD()` functions:
 "
-"         nno cd :call FuncA()<cr>
+"        nno cd :call FuncA()<cr>
 "
-"         fu! FuncA() abort
-"             call FuncB()
-"         endfu
+"        fu! FuncA()
+"            call FuncB()
+"            call FuncC()
+"        endfu
 "
-"         fu! FuncB() abort
-"             call FuncC()
-"         endfu
+"        fu! FuncB()
+"            abcd
+"        endfu
 "
-"         fu! FuncC() abort
-"             abcd
-"         endfu
+"        fu! FuncC()
+"            call s:FuncD()
+"        endfu
+"
+"        fu! s:FuncD()
+"            efgh
+"        endfu
 "
 " Then, press `cd`, and execute `:WTF`.
+"
+""}}}
+" exception#trace "{{{
 
 fu! exception#trace() abort
+
+    " TV for `errors`:
+    "         [
+    "         \   {'stack': ['<SNR>3_FuncC[56]', 'FuncB[34]', 'FuncA[12]'],
+    "         \   'msg' :   'E492: Not an editor command:     abcd'},
+    "         \
+    "         \   {'stack': ['<SNR>3_FuncF[99]', 'FuncE[90]', 'FuncD[78]'],
+    "         \   'msg' :   'E492: Not an editor command:     efgh'},
+    "         ]
+    "
+    " In this fictitious example, the errors occurred in s:FuncC() and s:FuncF(),
+    " and the chains of calls are:
+    "         FuncA → FuncB → s:FuncC
+    "         FuncD → FuncE → s:FuncF
+    let errors = s:get_raw_trace()
+
+    " if there aren't any error, return
+    if empty(errors)
+        return
+    endif
+
+    " initialize the qfl
+    let qfl = []
+
+    " iterate over the errors (there could be only one)
+    for err in errors
+        "                              ┌ number of digits in the length of the stack trace
+        "                              │ we'll need this number to format an expression
+        "                              │ in a `printf()` later
+        "                              │
+        "                              │ for example, if the stack trace tracks
+        "                              │ a sequence of 12 nested functions
+        "                              │ then `len(len(err.stack))` is 2,
+        "                              │ because there are 2 digits in 12
+        "                              │
+        "            ┌─────────────────┤
+        let digits = len(len(err.stack))
+        "                └────────────┤
+        "                             └ length of the error stack
+        "
+        "                               for example, if the error occurred in line 56 of `FuncC`,
+        "                               which was called in line 34 of `FuncB`,
+        "                               which was called in line 12 of `FuncA`,
+        "                               then `err.stack` is the list:
+        "
+        "                                       [ 'FuncA[12]', 'FuncB[34]', 'FuncC[56]' ]
+
+        " we use `i` to index the position of a function call in the stack trace
+        let i = 0
+
+        " add the error message to the qfl
+        call add(qfl, {
+                      \   'text':  err.msg,
+                      \   'lnum':  0,
+                      \   'bufnr': 0,
+                      \ })
+
+        " Now, we need to add to the qfl the function calls which lead to the error.
+        " And for each of them, we need to find out where it was made:
+        "
+        "         - which file
+        "         - which line of the file (!= line of the function)
+        "
+        " TV for `err.stack`:    [ 'FuncB[34]', 'FuncA[12]' ]
+        " TV for `func_call`:      'FuncB[34]'
+        for func_call in err.stack
+            " TV: 'FuncB'
+            let func_name = matchstr(func_call, '\v.{-}\ze\[\d+\]$')
+
+            " if we don't have a function name, process next function call in
+            " the stack
+            if empty(func_name)
+                continue
+            endif
+
+            " TV: '34'
+            let l:lnum = str2nr(matchstr(func_call, '\v\[\zs\d+\ze\]$'))
+
+            " TV:
+            " ['   function FuncB()', '    Last set from ~/.vim/vimrc', …, '34    abcd', …, '   endfunction']
+            let func_def = split(execute('sil! verbose function '.func_name), "\n")
+
+            " if the function definition is shorter than 2 lines, the
+            " information we need isn't there, so don't bother creating an
+            " entry in the qfl for it; instead process next function call
+            " in the stack
+            if len(func_def) < 2
+                continue
+            endif
+
+            " expand the full path of the source file from which the function
+            " call was made
+            let src = fnamemodify(matchstr(func_def[1], '\vLast set from \zs.+'), ':p')
+            " if it's not readable, we won't be able to visit it from the qfl,
+            " so, again, process next function call in the stack
+            if !filereadable(src)
+                continue
+            endif
+
+            " build a pattern to match a line beginning with:
+            "     function! FuncA
+            " … or
+            "     function! s:FuncA
+            " … or
+            "     function! <sid>FuncA
+
+            " 1st part of the pattern (before the name of the function)
+            let pat = '\v\C^\s*fu%[nction]!?\s+'
+
+            " if the function is script-local, we can't add the raw function
+            " name (with `<SNR>`), because that's not how it was written in the
+            " source file
+            if func_name =~# '^<SNR>'
+                " add the 3 possible script-local prefix that the author of
+                " the plugin could have used:    `s:`, `<sid>`, `<SID>`
+                let pat       .= '%(\<%(sid|SID)\>|s:)'
+                " get the name of the function without `<SNR>3_`
+                let func_name  = matchstr(func_name, '\v\<SNR\>\d+_\zs.+')
+            endif
+            " add the name of the function
+            let pat .= func_name.'>'
+
+            " the function call was made on some line of the source file
+            " find which one
+            for line in readfile(src)
+                let l:lnum += 1
+                if line =~# pat
+                    break
+                endif
+            endfor
+
+            let fname = fnamemodify(src, ':.')
+
+            " the value of the `text` key is a function call; ex:
+            "         'FuncA[12]'
+            "
+            " … prefixed with its index in the stack trace and a dot; ex:
+            "         '0. Func[12]'
+
+            call add(qfl, {
+                          \   'text':     printf('%*s. %s', digits, '#'.i, func_call),
+                          \   'filename': fname,
+                          \   'lnum':     l:lnum,
+                          \   'type':     'I',
+                          \ })
+
+                          " To understand the `type` key, read :h errorformat-multi-line, and:
+                          "         https://stackoverflow.com/q/4403824
+                          "
+                          " Apparently, it tells Vim what's the type of an error.
+                          " By default, the type should be displayed after the line number of an
+                          " entry in the qfl. Use E for Error, W for Warning, and I for Info.
+                          "
+                          " Technically, it probably has an influence on the `%t` item used in
+                          " 'errorformat'.
+
+            let i += 1
+        endfor
+    endfor
+
+    if !empty(qfl)
+        call setqflist(qfl, 'r')
+        copen
+    endif
+endfu
+
+"}}}
+" get_raw_trace "{{{
+
+fu! s:get_raw_trace() abort
     " get the log messages
     let lines = reverse(split(execute('sil messages'), "\n"))
-"               │
-"               └─ reverse the order because we're interested in the most
-"                  recent error
+    "               │
+    "               └─ reverse the order because we're interested in the most
+    "                  recent error
 
     " if we've just started Vim, there'll be only 2 lines in the log
     " in this case don't do anything, because there's no error
@@ -44,12 +229,14 @@ fu! exception#trace() abort
         return
     endif
 
+"         ┌─ index of the line of the log currently processed in the next while loop
+"         │  ┌─ index of the last line in the log where an error occurred
+"         │  │
     let [ i, e, errors ] = [ 0, 0, [] ]
-"         │  │  │
-"         │  │  └─ list of errors built in the next while loop
-"         │  └─ index of the last line where an error occurred
-"         └─ index of the line of the log currently processed in the next
-"            while loop
+"               │
+"               │  list of errors built in the next while loop
+"               │  each error will be a dictionary containing 2 keys,
+"               └─  a stack trace and a message
 
     " iterate over the lines in the log
     while i < len(lines)
@@ -59,39 +246,67 @@ fu! exception#trace() abort
         if i > 1 && lines[i] =~# '^Error detected while processing function '
                     \ && lines[i-1] =~? '\v^line\s+\d+'
 
-            " get the line where the error occurred
-            let lnum  = matchstr(lines[i-1], '\d\+')
+            " … then get the line where the error occurred
+            " we need it to complete the stack (in the next `printf()`)
+            let l:lnum  = matchstr(lines[i-1], '\d\+')
 
-"               ┌─ typical value:    <SNR>3_broken_func[123]
-"               │
-            let stack = printf('%s[%d]', lines[i][41:-2], lnum)
-"                                        │
-"                                        └─ name of the function
-"                                           the name begins after the 41th character,
-"                                           and `-2` gets rid of a colon at the end of the line
+            " … and the name of the innermost function where an error occurred
+            let inner_func = lines[i][41:-2]
+            "                         │  │
+            "                         │  └─ get rid of a colon at the end of the line
+            "                         └─ the name begins after the 41th character
+
+            " TV for `stack`:    function FuncA[12]..FuncB[34]..FuncC[56]:
+            let stack = printf('%s[%d]', inner_func, l:lnum)
+            "                     └──┤
+            "                        └ add the address of the line where the
+            "                          innermost error occurred (ex: 56),
+            "                          inside square brackets (to follow the
+            "                          notation used by Vim for the outer functions)
+
+            " Now that we have generated a primitive stack, we split it into
+            " a list (useful for further processing), we enrich it with
+            " the associated error message associated, and add the resulting
+            " dictionary to the `errors` list.
+            " TV for the `stack` variable: "{{{
+            "         FuncA[1]..FuncB[1]..FuncC[1]
+            "
+            " TV for the `stack` key:
+            "         [ 'FuncA[12]', 'FuncB[34]', 'FuncC[56]' ]
+            "
+            " TV for the `msg` key:
+            "         E492: Not an editor command:     abcd
+            "
+            " Since, the messages in the log have been reversed:
+            "         lines[i]   = error
+            "         lines[i-1] = address of the error
+            "         lines[i-2] = message of the error
+            ""}}}
             call add(errors, {
                              \  'stack': reverse(split(stack, '\.\.')),
                              \  'msg':   lines[i-2],
                              \ })
+
+            " remember the index of the line of the log where an error occurred
             let e = i
         endif
 
-        " increment `i` to process next line in the log, in the next
-        " iteration of the while loop
+        " increment `i` to process next line in the log, in the next iteration
+        " of the while loop
         let i += 1
 
-"          ┌─ there has been at least an error
-"          │
+        "  ┌─ there has been at least an error
+        "  │
         if e && i - e > 3
-"               └───────┤
-"                       └ there're more than 3 lines between the current line of the
-"                         log, and the last one which contained a “Error detected
-"                         while processing function“ message
+        "       └───────┤
+        "               └ there're more than 3 lines between the current line of the
+        "                 log, and the last one which contained a “Error detected
+        "                 while processing function“ message
 
             " get out of the while loop because we're only interested in the last error
             break
 
-            " If we're only interested in the last error, then why 3? :
+            " If we're only interested in the last error, then why 3? : "{{{
             "         i - e > 3
             "
             " Why not 1? :
@@ -108,109 +323,16 @@ fu! exception#trace() abort
             " 2 lines between 2 of them. Example:
             "
             "         Error detected while processing function foo   <+
-            "         line    12:                                     │ distance < 3 lines
+            "         line    12:                                     │ distance = 3 lines
             "         E492: Not an editor command:     bar            │            │
             "         Error detected while processing function baz   <+            └ that's where the 3,
             "         line    34:                                                    in the `i - e > 3` condition,
             "         E492: Not an editor command:     qux                           comes from
+            ""}}}
         endif
     endwhile
 
-    " if there aren't any error, return
-    if empty(errors)
-        return
-    endif
-
-    let errlist = []
-
-    let g:stack  = deepcopy(stack)
-    let g:errors = deepcopy(errors)
-    for err in errors
-
-"                                      ┌ number of digits in the length of the stack trace
-"                                      │
-"                                      │ for example, if the stack trace tracks
-"                                      │ a sequence of 12 nested functions
-"                                      │ then `len(len(err.stack))` is 2,
-"                                      │ because there are 2 digits in 12
-"                                      │
-"                    ┌─────────────────┤
-        let digits = len(len(err.stack))
-"                        └────────────┤
-"                                     └ length of the error stack
-"
-"                                       for example, if the error occurred in line 56 of `FuncC`,
-"                                       which called in line 34 of `FuncB`,
-"                                       which was called in line 12 of `FuncA`,
-"                                       then `err.stack` is the list:
-"
-"                                               [ 'FuncA[12]', 'FuncB[34]', 'FuncC[56]' ]
-
-        " To understand the `type` key, read :h errorformat-multi-line
-        "
-        " FIXME:
-        " Apparently, it tells Vim what's the type of an error (for example,
-        " W for Warning). And according to this thread:
-        "         https://stackoverflow.com/q/4403824
-        "
-        " … it should have an influence on the `%t` item if used in 'errorformat'.
-        " But atm, it doesn't make any difference on my system.
-        " Besides, after the line number of an error, the keyword (type?)
-        " `info` is always written, no matter which value I give to the key
-        " `type` (tested with various &efm values given in the previous
-        " stackoverflow thread).
-        let i = 0
-        call add(errlist, {
-                          \   'text':  err.msg,
-                          \   'lnum':  0,
-                          \   'bufnr': 0,
-                          \   'type':  'E',
-                          \ })
-
-        for t in err.stack
-            let func = matchstr(t, '\v.{-}\ze\[\d+\]$')
-            let lnum = str2nr(matchstr(t, '\v\[\zs\d+\ze\]$'))
-
-            let verb = split(execute('sil! verbose function '.func), "\n")
-            if len(verb) < 2
-                continue
-            endif
-
-            let src = fnamemodify(matchstr(verb[1], '\vLast set from \zs.+'), ':p')
-            if !filereadable(src)
-                continue
-            endif
-
-            let pat = '\v\C^\s*fu%[nction]!?\s+'
-            if func =~# '^<SNR>'
-                let pat .= '%(\<%(sid|SID)\>|s:)'
-                let func = matchstr(func, '\v\<SNR\>\d+_\zs.+')
-            endif
-            let pat .= func.'>'
-
-            for line in readfile(src)
-                let lnum += 1
-                if line =~# pat
-                    break
-                endif
-            endfor
-
-            if !empty(src) && !empty(func)
-                let fname = fnamemodify(src, ':.')
-                call add(errlist, {
-                                  \   'text':     printf('%*s. %s', digits, '#'.i, t),
-                                  \   'filename': fname,
-                                  \   'lnum':     lnum,
-                                  \   'type':     'I',
-                                  \ })
-            endif
-
-            let i += 1
-        endfor
-    endfor
-
-    if !empty(errlist)
-        call setqflist(errlist, 'r')
-        copen
-    endif
+    return errors
 endfu
+
+"}}}
