@@ -61,10 +61,10 @@ fu! stacktrace#qfl(...) abort
     " and the chains of calls were:
     "         FuncA → FuncB → s:FuncC
     "         FuncD → FuncE → s:FuncF
-    let errors = s:get_raw_trace(get(a:000, 0, 3))
+    let l:errors = s:get_raw_trace(get(a:000, 0, 3))
 
     " if there aren't any error, return
-    if empty(errors)
+    if empty(l:errors)
         return
     endif
 
@@ -72,7 +72,7 @@ fu! stacktrace#qfl(...) abort
     let qfl = []
 
     " iterate over the errors (there could be only one)
-    for err in errors
+    for err in l:errors
         "                              ┌ number of digits in the length of the stack trace
         "                              │ we'll need this number to format an expression
         "                              │ in a `printf()` later
@@ -244,7 +244,7 @@ fu! s:get_raw_trace(...) abort
 "         ┌─ index of the line of the log currently processed in the next while loop
 "         │  ┌─ index of the last line in the log where an error occurred
 "         │  │
-    let [ i, e, errors ] = [ 0, 0, [] ]
+    let [ i, e, l:errors ] = [ 0, 0, [] ]
 "               │
 "               │  list of errors built in the next while loop
 "               │  each error will be a dictionary containing 2 keys,
@@ -294,10 +294,10 @@ fu! s:get_raw_trace(...) abort
             "         lines[i-1] = address of the error
             "         lines[i-2] = message of the error
             ""}}}
-            call add(errors, {
-                             \  'stack': reverse(split(stack, '\.\.')),
-                             \  'msg':   lines[i-2],
-                             \ })
+            call add(l:errors, {
+                               \  'stack': reverse(split(stack, '\.\.')),
+                               \  'msg':   lines[i-2],
+                               \ })
 
             " remember the index of the line of the log where an error occurred
             let e = i
@@ -344,7 +344,7 @@ fu! s:get_raw_trace(...) abort
         endif
     endwhile
 
-    return errors
+    return l:errors
 endfu
 
 "}}}
