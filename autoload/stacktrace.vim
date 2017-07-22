@@ -18,10 +18,13 @@
 "
 " For more info:
 "         https://en.wikipedia.org/wiki/Stack_trace
-""}}}
-" To test the stacktrace#qfl() function, install the following `cd` mapping "{{{
-" and the `FuncA()`, `FuncB()`, `FuncC()`, `FuncD()` functions:
 "
+""}}}
+" Test "{{{
+"
+" To test the stacktrace#qfl() function, install the following `cd` mapping
+" and the `FuncA()`, `FuncB()`, `FuncC()`, `FuncD()` functions:
+
 "        nno cd :call FuncA()<cr>
 "
 "        fu! FuncA()
@@ -40,7 +43,7 @@
 "        fu! s:FuncD()
 "            efgh
 "        endfu
-"
+
 " Then, press `cd`, and execute `:WTF`.
 "
 ""}}}
@@ -50,17 +53,17 @@ fu! stacktrace#qfl(...) abort
 
     " TV for `errors`:
     "         [
-    "         \   {'stack': ['<SNR>3_FuncC[56]', 'FuncB[34]', 'FuncA[12]'],
+    "         \   {'stack': ['FuncB[34]', 'FuncA[12]'],
     "         \   'msg' :   'E492: Not an editor command:     abcd'},
     "         \
-    "         \   {'stack': ['<SNR>3_FuncF[99]', 'FuncE[90]', 'FuncD[78]'],
+    "         \   {'stack': ['<SNR>3_FuncD[78]', 'FuncC[56]' ],
     "         \   'msg' :   'E492: Not an editor command:     efgh'},
     "         ]
     "
-    " In this fictitious example, 2 errors occurred in s:FuncC() and s:FuncF(),
+    " In this fictitious example, 2 errors occurred in FuncB() and s:FuncD(),
     " and the chains of calls were:
-    "         FuncA → FuncB → s:FuncC
-    "         FuncD → FuncE → s:FuncF
+    "         FuncA → FuncB
+    "         FuncC → s:FuncD
     let l:errors = s:get_raw_trace(get(a:000, 0, 3))
 
     " if there aren't any error, return
@@ -73,27 +76,6 @@ fu! stacktrace#qfl(...) abort
 
     " iterate over the errors (there could be only one)
     for err in l:errors
-        "                              ┌ number of digits in the length of the stack trace
-        "                              │ we'll need this number to format an expression
-        "                              │ in a `printf()` later
-        "                              │
-        "                              │ for example, if the stack trace tracks
-        "                              │ a sequence of 12 nested functions
-        "                              │ then `len(len(err.stack))` is 2,
-        "                              │ because there are 2 digits in 12
-        "                              │
-        "            ┌─────────────────┤
-        let digits = len(len(err.stack))
-        "                └────────────┤
-        "                             └ length of the error stack
-        "
-        "                               for example, if the error occurred in line 56 of `FuncC`,
-        "                               which was called in line 34 of `FuncB`,
-        "                               which was called in line 12 of `FuncA`,
-        "                               then `err.stack` is the list:
-        "
-        "                                       [ 'FuncA[12]', 'FuncB[34]', 'FuncC[56]' ]
-
         " we use `i` to index the position of a function call in the stack trace
         let i = 0
 
@@ -104,42 +86,42 @@ fu! stacktrace#qfl(...) abort
                       \   'bufnr': 0,
                       \ })
 
-        " Now, we need to add to the qfl the function calls which lead to the error.
+        " Now, we need to add to the qfl, the function calls which lead to the error.
         " And for each of them, we need to find out where it was made:
         "
         "         - which file
         "         - which line of the file (!= line of the function)
         "
         " TV for `err.stack`:    [ 'FuncB[34]', 'FuncA[12]' ]
-        " TV for `func_call`:      'FuncB[34]'
-        for func_call in err.stack
+        " TV for `call`:           'FuncB[34]'
+        for call in err.stack
             " TV: 'FuncB'
-            let func_name = matchstr(func_call, '\v.{-}\ze\[\d+\]$')
+            let name = matchstr(call, '\v.{-}\ze\[\d+\]$')
 
             " if we don't have a function name, process next function call in
             " the stack
-            if empty(func_name)
+            if empty(name)
                 continue
             endif
 
             " TV: '34'
-            let l:lnum = str2nr(matchstr(func_call, '\v\[\zs\d+\ze\]$'))
+            let l:lnum = str2nr(matchstr(call, '\v\[\zs\d+\ze\]$'))
 
             " TV:
             " ['   function FuncB()', '    Last set from ~/.vim/vimrc', …, '34    abcd', …, '   endfunction']
-            let func_def = split(execute('sil! verbose function '.func_name), "\n")
+            let def = split(execute('verb function '.name, 'silent!'), '\n')
 
-            " if the function definition is shorter than 2 lines, the
+            " if the function definition doesn't have at least 2 lines, the
             " information we need isn't there, so don't bother creating an
             " entry in the qfl for it; instead process next function call
             " in the stack
-            if len(func_def) < 2
+            if len(def) < 2
                 continue
             endif
 
             " expand the full path of the source file from which the function
             " call was made
-            let src = fnamemodify(matchstr(func_def[1], '\vLast set from \zs.+'), ':p')
+            let src = fnamemodify(matchstr(def[1], '\vLast set from \zs.+'), ':p')
             " if it's not readable, we won't be able to visit it from the qfl,
             " so, again, process next function call in the stack
             if !filereadable(src)
@@ -159,15 +141,15 @@ fu! stacktrace#qfl(...) abort
             " if the function is script-local, we can't add the raw function
             " name (with `<SNR>`), because that's not how it was written in the
             " source file
-            if func_name =~# '^<SNR>'
+            if name =~# '^<SNR>'
                 " add the 3 possible script-local prefix that the author of
                 " the plugin could have used:    `s:`, `<sid>`, `<SID>`
-                let pat       .= '%(\<%(sid|SID)\>|s:)'
+                let pat .= '%(\<%(sid|SID)\>|s:)'
                 " get the name of the function without `<SNR>3_`
-                let func_name  = matchstr(func_name, '\v\<SNR\>\d+_\zs.+')
+                let name = matchstr(name, '\v\<SNR\>\d+_\zs.+')
             endif
             " add the name of the function
-            let pat .= func_name.'>'
+            let pat .= name.'>'
 
             " the function call was made on some line of the source file
             " find which one
@@ -183,18 +165,17 @@ fu! stacktrace#qfl(...) abort
             " We have its line address with `l:lnum`.
             " And we can generate a simple text with:
             "
-            "                  ┌─ width of the digits
-            "                  │
-            "         printf('%*s. %s', digits, '#'.i, func_call),
-            "                 │    │
-            "                 │    └─ function call; ex: 'FuncA[12]'
-            "                 └─ index of the function call in the stack
+            "         printf('#%s. %s', i, call),
+            "                  │   │
+            "                  │   └─ function call; ex: 'FuncA[12]'
+            "                  └─ index of the function call in the stack
+            "                     the lower, the deeper
             "
             " The final text could be sth like:
             "         '0. Func[12]'
 
             call add(qfl, {
-                          \   'text':     printf('%*s. %s', digits, '#'.i, func_call),
+                          \   'text':     printf('#%s. %s', i, call),
                           \   'filename': src,
                           \   'lnum':     l:lnum,
                           \   'type':     'I',
@@ -219,6 +200,7 @@ fu! stacktrace#qfl(...) abort
     " populate the qfl
     if !empty(qfl)
         call setqflist(qfl)
+        call setqflist([], 'a', { 'title': 'Stack trace(s)' })
         copen
     endif
 endfu
@@ -230,92 +212,98 @@ fu! s:get_raw_trace(...) abort
     let max_dist = get(a:000, 0, 3)
 
     " get the log messages
-    let lines = reverse(split(execute('sil messages'), "\n"))
+    "
+    " for some reason, `execute()` sometimes produces  ┐
+    " 1 or several consecutive empty line(s)           │
+    " even though they aren't there in the output of   │
+    " `:messages`                                      │
+    let messages = reverse(split(execute('messages'), '\n\+'))
     "               │
     "               └─ reverse the order because we're interested in the most
     "                  recent error
 
-    " if we've just started Vim, there'll be only 2 lines in the log
-    " in this case don't do anything, because there's no error
-    if len(lines) < 3
+    " if we've just started Vim, there can't be any error, so don't do anything
+    if len(messages) < 3
         return
     endif
 
-"         ┌─ index of the line of the log currently processed in the next while loop
-"         │  ┌─ index of the last line in the log where an error occurred
-"         │  │
+    "     ┌─ initialize index of the message processed in the next loop
+    "     │  ┌─ initialize index of the last message where an error occurred
+    "     │  │
     let [ i, e, l:errors ] = [ 0, 0, [] ]
-"               │
-"               │  list of errors built in the next while loop
-"               │  each error will be a dictionary containing 2 keys,
-"               └─  a stack trace and a message
+    "           │
+    "           └─ list of errors built in the next loop;
+    "              each error will be a dictionary containing 2 keys,
+    "              whose values will be a stack and a message
 
-    " iterate over the lines in the log
-    while i < len(lines)
+    " iterate over the messages in the log
+    while i < len(messages)
 
-        " if a line begins with “Error detected while processing function“
-        " and the previous one with “line 123“ (123 being a random number)
-        if i > 1 && lines[i] =~# '^Error detected while processing function '
-                    \ && lines[i-1] =~? '\v^line\s+\d+'
+        " if a message begins with “Error detected while processing function“
+        " and the previous one with “line {some_number}“
+        if i > 1 && messages[i]   =~# '^Error detected while processing function '
+               \ && messages[i-1] =~? '\v^line\s+\d+'
 
-            " … then get the line where the error occurred
-            " we need it to complete the stack (in the next `printf()`)
-            let l:lnum  = matchstr(lines[i-1], '\d\+')
+            " … then get the line address in the innermost function where the
+            " error occurred
+            let l:lnum = matchstr(messages[i-1], '\d\+')
 
-            " … and the name of the innermost function where an error occurred
-            let inner_func = lines[i][41:-2]
-            "                         │  │
-            "                         │  └─ get rid of a colon at the end of the line
-            "                         └─ the name begins after the 41th character
+            " … and the stack of function calls leading to the error
+            let partial_stack = messages[i][41:-2]
+            "                                │  │
+            "                                │  └─ get rid of a colon at the end of the line
+            "                                └─ the name begins after the 41th character
 
-            " TV for `stack`:    function FuncA[12]..FuncB[34]..FuncC[56]:
-            let stack = printf('%s[%d]', inner_func, l:lnum)
+            " combine `lnum` and `partial_stack` to build a string describing
+            " the complete stack
+            let stack = printf('%s[%d]', partial_stack, l:lnum)
             "                     └──┤
             "                        └ add the address of the line where the
             "                          innermost error occurred (ex: 56),
             "                          inside square brackets (to follow the
             "                          notation used by Vim for the outer functions)
-
-            " Now that we have generated a primitive stack, we split it into
-            " a list (useful for further processing), we enrich it with
-            " the associated error message associated, and add the resulting
-            " dictionary to the `errors` list.
-            " TV for the `stack` variable: "{{{
-            "         FuncA[1]..FuncB[1]..FuncC[1]
             "
-            " TV for the `stack` key:
+            " TV for `stack`:    function FuncA[12]..FuncB[34]..FuncC[56]
+
+            " Now that we have the stack as a string, we:
+            "
+            "       1. convert it into a list
+            "       2. store it into a dictionary
+            "       3. add the associated error message to the dictionary
+            "       4. add the dictionary to a list of all errors found so far
+
+            " TV for the `stack` key: "{{{
             "         [ 'FuncA[12]', 'FuncB[34]', 'FuncC[56]' ]
             "
             " TV for the `msg` key:
             "         E492: Not an editor command:     abcd
             "
             " Since, the messages in the log have been reversed:
-            "         lines[i]   = error
-            "         lines[i-1] = address of the error
-            "         lines[i-2] = message of the error
+            "         messages[i]   = error
+            "         messages[i-1] = address of the error
+            "         messages[i-2] = message of the error
             ""}}}
             call add(l:errors, {
                                \  'stack': reverse(split(stack, '\.\.')),
-                               \  'msg':   lines[i-2],
+                               \  'msg':   messages[i-2],
                                \ })
 
-            " remember the index of the line of the log where an error occurred
+            " remember the index of the message in the log where an error occurred
             let e = i
         endif
 
-        " increment `i` to process next line in the log, in the next iteration
-        " of the while loop
+        " in the next iteration of the loop, process next message
         let i += 1
 
         "  ┌─ there has been at least an error
         "  │
         if e && i - e > max_dist
         "       └───────┤
-        "               └ there're more than `max_dist` lines between the current
-        "                 line of the log, and the last one which contained a
-        "                 “Error detected while processing function“ message
+        "               └ there're more than `max_dist` lines between the next
+        "                 message in the log, and the last one which contained
+        "                 “Error detected while processing function“
 
-            " get out of the while loop because we're only interested in the last error
+            " get out of the loop because the distance is too high
             break
 
             " If we're only interested in the last error, then why 3? : "{{{
@@ -330,7 +318,7 @@ fu! s:get_raw_trace(...) abort
             "         line    12:
             "         E492: Not an editor command:     bar
             "
-            " Note that if we have several consecutive errors, the while loop
+            " Note that if we have several consecutive errors, the loop
             " should still process them all, because there will only be
             " 2 lines between 2 of them. Example:
             "
