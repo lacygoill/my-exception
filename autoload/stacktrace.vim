@@ -165,31 +165,20 @@ fu! stacktrace#qfl(...) abort
             " We have its line address with `l:lnum`.
             " And we can generate a simple text with:
             "
-            "         printf('#%s. %s', i, call),
-            "                  │   │
-            "                  │   └─ function call; ex: 'FuncA[12]'
-            "                  └─ index of the function call in the stack
-            "                     the lower, the deeper
+            "         printf('%s. %s', i, call),
+            "                 │   │
+            "                 │   └─ function call; ex: 'FuncA[12]'
+            "                 └─ index of the function call in the stack
+            "                    the lower, the deeper
             "
             " The final text could be sth like:
             "         '0. Func[12]'
 
             call add(qfl, {
-                          \   'text':     printf('#%s. %s', i, call),
+                          \   'text':     printf('%s. %s', i, call),
                           \   'filename': src,
                           \   'lnum':     l:lnum,
-                          \   'type':     'I',
                           \ })
-
-                          " To understand the `type` key, read :h errorformat-multi-line, and:
-                          "         https://stackoverflow.com/q/4403824
-                          "
-                          " Apparently, it tells Vim what's the type of an error.
-                          " By default, the type should be displayed after the line number of an
-                          " entry in the qfl. Use E for Error, W for Warning, and I for Info.
-                          "
-                          " Technically, it probably has an influence on the `%t` item used in
-                          " 'errorformat'.
 
             " increment `i` to update the index of the next function call in
             " the stack
