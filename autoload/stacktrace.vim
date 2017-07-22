@@ -217,13 +217,13 @@ fu! s:get_raw_trace(...) abort
     " 1 or several consecutive empty line(s)           │
     " even though they aren't there in the output of   │
     " `:messages`                                      │
-    let messages = reverse(split(execute('messages'), '\n\+'))
-    "               │
-    "               └─ reverse the order because we're interested in the most
-    "                  recent error
+    let msgs = reverse(split(execute('messages'), '\n\+'))
+    "          │
+    "          └─ reverse the order because we're interested in the most
+    "             recent error
 
     " if we've just started Vim, there can't be any error, so don't do anything
-    if len(messages) < 3
+    if len(msgs) < 3
         return
     endif
 
@@ -237,19 +237,19 @@ fu! s:get_raw_trace(...) abort
     "              whose values will be a stack and a message
 
     " iterate over the messages in the log
-    while i < len(messages)
+    while i < len(msgs)
 
         " if a message begins with “Error detected while processing function“
         " and the previous one with “line {some_number}“
-        if i > 1 && messages[i]   =~# '^Error detected while processing function '
-               \ && messages[i-1] =~? '\v^line\s+\d+'
+        if i > 1 && msgs[i]   =~# '^Error detected while processing function '
+               \ && msgs[i-1] =~? '\v^line\s+\d+'
 
             " … then get the line address in the innermost function where the
             " error occurred
-            let l:lnum = matchstr(messages[i-1], '\d\+')
+            let l:lnum = matchstr(msgs[i-1], '\d\+')
 
             " … and the stack of function calls leading to the error
-            let partial_stack = messages[i][41:-2]
+            let partial_stack = msgs[i][41:-2]
             "                                │  │
             "                                │  └─ get rid of a colon at the end of the line
             "                                └─ the name begins after the 41th character
@@ -279,13 +279,13 @@ fu! s:get_raw_trace(...) abort
             "         E492: Not an editor command:     abcd
             "
             " Since, the messages in the log have been reversed:
-            "         messages[i]   = error
-            "         messages[i-1] = address of the error
-            "         messages[i-2] = message of the error
+            "         msgs[i]   = error
+            "         msgs[i-1] = address of the error
+            "         msgs[i-2] = message of the error
             ""}}}
             call add(l:errors, {
                                \  'stack': reverse(split(stack, '\.\.')),
-                               \  'msg':   messages[i-2],
+                               \  'msg':   msgs[i-2],
                                \ })
 
             " remember the index of the message in the log where an error occurred
