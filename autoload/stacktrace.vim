@@ -107,9 +107,29 @@ fu! stacktrace#qfl(...) abort
             " TV: '34'
             let l:lnum = str2nr(matchstr(call, '\v\[\zs\d+\ze\]$'))
 
-            " TV:
-            " ['   function FuncB()', '    Last set from ~/.vim/vimrc', …, '34    abcd', …, '   endfunction']
-            let def = split(execute('verb function '.name, 'silent!'), '\n')
+            " if the name of a function contains a slash, or a dot, it's
+            " not a function, it's a file
+            "
+            " it happens when the error occurred in a sourced file, like
+            " a ftplugin; put a garbage command in one of them to reproduce
+            if name =~# '[/.]'
+                call add(qfl, {
+                              \   'text':     '',
+                              \   'filename': name,
+                              \   'lnum':     l:lnum,
+                              \ })
+                " there's no chain of calls, the only error comes from this file
+                continue
+            else
+                " TV:
+                "     [ '   function FuncB()',
+                "     \ '    Last set from ~/.vim/vimrc',
+                "     \ …,
+                "     \ '34    abcd',
+                "     \ …,
+                "     \ '   endfunction']
+                let def = split(execute('verb function '.name, 'silent!'), '\n')
+            endif
 
             " if the function definition doesn't have at least 2 lines, the
             " information we need isn't there, so don't bother creating an
@@ -228,9 +248,9 @@ fu! s:get_raw_trace(...) abort
     " iterate over the messages in the log
     while i < len(msgs)
 
-        " if a message begins with “Error detected while processing function“
+        " if a message begins with “Error detected while processing “
         " and the previous one with “line {some_number}“
-        if i > 1 && msgs[i]   =~# '^Error detected while processing function '
+        if i > 1 && msgs[i]   =~# '^Error detected while processing '
                \ && msgs[i-1] =~? '\v^line\s+\d+'
 
             " … then get the line address in the innermost function where the
@@ -238,10 +258,7 @@ fu! s:get_raw_trace(...) abort
             let l:lnum = matchstr(msgs[i-1], '\d\+')
 
             " … and the stack of function calls leading to the error
-            let partial_stack = msgs[i][41:-2]
-            "                                │  │
-            "                                │  └─ get rid of a colon at the end of the line
-            "                                └─ the name begins after the 41th character
+            let partial_stack = matchstr(msgs[i], '\vError detected while processing %(function )?\zs.{-}\ze:?$')
 
             " combine `lnum` and `partial_stack` to build a string describing
             " the complete stack
