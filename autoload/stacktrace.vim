@@ -81,9 +81,9 @@ fu! stacktrace#qfl(...) abort
 
         " add the error message to the qfl
         call add(qfl, {
-                      \   'text':  err.msg,
-                      \   'lnum':  0,
-                      \   'bufnr': 0,
+                      \ 'text':  err.msg,
+                      \ 'lnum':  0,
+                      \ 'bufnr': 0,
                       \ })
 
         " Now, we need to add to the qfl, the function calls which lead to the error.
@@ -258,7 +258,7 @@ fu! s:get_raw_trace(...) abort
             let l:lnum = matchstr(msgs[i-1], '\d\+')
 
             " … and the stack of function calls leading to the error
-            let partial_stack = matchstr(msgs[i], '\vError detected while processing %(function )?\zs.{-}\ze:?$')
+            let partial_stack = matchstr(msgs[i], '\vError detected while processing %(function )?\zs.*\ze:$')
 
             " combine `lnum` and `partial_stack` to build a string describing
             " the complete stack
@@ -285,9 +285,9 @@ fu! s:get_raw_trace(...) abort
             "         E492: Not an editor command:     abcd
             "
             " Since, the messages in the log have been reversed:
-            "         msgs[i]   = error
-            "         msgs[i-1] = address of the error
-            "         msgs[i-2] = message of the error
+            "         msgs[i-2] = E123: …
+            "         msgs[i-1] = line  42:
+            "         msgs[i]   = Error detected while processing …:
             ""}}}
             call add(l:errors, {
                                \  'stack': reverse(split(stack, '\.\.')),
