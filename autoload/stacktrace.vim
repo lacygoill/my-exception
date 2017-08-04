@@ -211,6 +211,11 @@ fu! stacktrace#qfl(...) abort
         call setqflist(qfl)
         call setqflist([], 'a', { 'title': 'Stack trace(s)' })
         copen
+        " hide noise (double bar in front of error message)
+        if &ft ==# 'qf'
+            setl conceallevel=3 concealcursor=cnv
+            syn match qf_hide_doublebar /^||/ conceal
+        endif
     endif
 endfu
 
