@@ -5,7 +5,7 @@
 "     TV = Typical Value
 "          example used to illustrate which kind of value a variable could store
 
-" Definition of a stack trace: "{{{
+" Definition of a stack trace: {{{1
 "
 " Programmers  commonly use  stack  tracing during  interactive and  post-mortem
 " debugging.  End-users may  see a  stack trace  displayed as  part of  an error
@@ -18,9 +18,8 @@
 "
 " For more info:
 "         https://en.wikipedia.org/wiki/Stack_trace
-"
-""}}}
-" Test "{{{
+
+" Test {{{1
 "
 " To test the stacktrace#qfl() function, install the following `cd` mapping
 " and the `FuncA()`, `FuncB()`, `FuncC()`, `FuncD()` functions:
@@ -45,11 +44,8 @@
 "        endfu
 
 " Then, press `cd`, and execute `:WTF`.
-"
-""}}}
-" stacktrace#qfl "{{{
 
-fu! stacktrace#qfl(...) abort
+fu! stacktrace#qfl(...) abort "{{{1
 
     " TV for `errors`:
     "         [
@@ -219,10 +215,7 @@ fu! stacktrace#qfl(...) abort
     endif
 endfu
 
-"}}}
-" get_raw_trace "{{{
-
-fu! s:get_raw_trace(...) abort
+fu! s:get_raw_trace(...) abort "{{{1
     let max_dist = get(a:000, 0, 3)
 
     " get the log messages
@@ -283,7 +276,7 @@ fu! s:get_raw_trace(...) abort
             "       3. add the associated error message to the dictionary
             "       4. add the dictionary to a list of all errors found so far
 
-            " TV for the `stack` key: "{{{
+            " TV for the `stack` key: {{{
             "         [ 'FuncA[12]', 'FuncB[34]', 'FuncC[56]' ]
             "
             " TV for the `msg` key:
@@ -317,7 +310,7 @@ fu! s:get_raw_trace(...) abort
             " get out of the loop because the distance is too high
             break
 
-            " If we're only interested in the last error, then why 3? : "{{{
+            " If we're only interested in the last error, then why 3? : {{{
             "         i - e > 3
             "
             " Why not 1? :
@@ -345,5 +338,3 @@ fu! s:get_raw_trace(...) abort
 
     return l:errors
 endfu
-
-"}}}
