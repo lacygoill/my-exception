@@ -209,8 +209,8 @@ fu! stacktrace#qfl(...) abort "{{{1
         copen
         " hide noise (double bar in front of error message)
         if &ft ==# 'qf'
-            setl conceallevel=3 concealcursor=cnv
-            syn match qf_hide_doublebar /^||/ conceal
+            setl conceallevel=3 concealcursor=nc
+            syn match qf_doublebar /^||/ conceal
         endif
     endif
 endfu
