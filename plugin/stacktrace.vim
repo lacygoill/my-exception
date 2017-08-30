@@ -1,3 +1,8 @@
+if exists('g:loaded_stacktrace')
+    finish
+endif
+let g:loaded_stacktrace = 1
+
 " Usage:
 "
 " :WTF 5  →    populate qfl with the last error, as well as the previous

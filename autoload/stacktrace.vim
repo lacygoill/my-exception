@@ -1,3 +1,8 @@
+if exists('g:auto_loaded_stacktrace')
+    finish
+endif
+let g:auto_loaded_stacktrace = 1
+
 " Source:
 " https://github.com/tweekmonster/exception.vim/blob/ca36f1ecf5b4cea1206355e8e5e858512018a5db/autoload/exception.vim
 
