@@ -1,7 +1,7 @@
-if exists('g:auto_loaded_stacktrace')
+if exists('g:autoloaded_stacktrace')
     finish
 endif
-let g:auto_loaded_stacktrace = 1
+let g:autoloaded_stacktrace = 1
 
 " Source:
 " https://github.com/tweekmonster/exception.vim/blob/ca36f1ecf5b4cea1206355e8e5e858512018a5db/autoload/exception.vim
@@ -215,7 +215,7 @@ fu! stacktrace#qfl(...) abort "{{{1
         " hide noise (double bar in front of error message)
         if &ft ==# 'qf'
             setl concealcursor=nc conceallevel=3
-            syn match qf_doublebar '^||' conceal
+            call matchadd('Conceal', '^||', 10, -1, {'conceal': 'x'})
         endif
     endif
 endfu
