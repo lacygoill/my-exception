@@ -215,7 +215,7 @@ fu! stacktrace#qfl(...) abort "{{{1
         " hide noise (double bar in front of error message)
         if &ft ==# 'qf'
             setl concealcursor=nc conceallevel=3
-            call matchadd('Conceal', '^||', 10, -1, {'conceal': 'x'})
+            call matchadd('Conceal', '^||', 0, -1, {'conceal': 'x'})
         endif
     endif
 endfu
