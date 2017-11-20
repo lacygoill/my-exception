@@ -213,7 +213,7 @@ fu! stacktrace#qfl(...) abort "{{{1
         call setqflist([], 'a', { 'title': 'Stack trace(s)' })
         copen
         " hide noise (double bar in front of error message)
-        if &ft ==# 'qf'
+        if &l:buftype ==# 'quickfix'
             setl concealcursor=nc conceallevel=3
             call matchadd('Conceal', '^||', 0, -1, {'conceal': 'x'})
         endif
