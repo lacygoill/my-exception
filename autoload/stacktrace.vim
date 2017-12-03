@@ -209,9 +209,10 @@ fu! stacktrace#qfl(...) abort "{{{1
 
     " populate the qfl
     if !empty(qfl)
+        call map(qfl, { i,v -> extend(v, {'valid': 1}) })
         call setqflist(qfl)
         call setqflist([], 'a', { 'title': 'Stack trace(s)' })
-        copen
+        doautocmd QuickFixCmdPost grep
         " hide noise (double bar in front of error message)
         if &l:buftype ==# 'quickfix'
             setl concealcursor=nc conceallevel=3
