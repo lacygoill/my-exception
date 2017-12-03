@@ -213,11 +213,12 @@ fu! stacktrace#qfl(...) abort "{{{1
         call setqflist(qfl)
         call setqflist([], 'a', { 'title': 'Stack trace(s)' })
         doautocmd QuickFixCmdPost grep
-        " hide noise (double bar in front of error message)
-        if &l:buftype ==# 'quickfix'
-            setl concealcursor=nc conceallevel=3
-            call matchadd('Conceal', '^||', 0, -1, {'conceal': 'x'})
+        if &l:buftype !=# 'quickfix'
+            return
         endif
+        " hide noise (double bar in front of error message)
+        setl concealcursor=nc conceallevel=3
+        call matchadd('Conceal', '^||', 0, -1, {'conceal': 'x'})
     endif
 endfu
 
