@@ -261,7 +261,7 @@ fu! s:get_raw_trace(...) abort "{{{1
 
             " … then get the line address in the innermost function where the
             " error occurred
-            "                                     ┌ used by `my_lib#catch_error_in_op_function()`
+            "                                     ┌ used by `debug#catch_error()`
             "                                     │ when it catches an error and we've enabled
             "                                     │ verbose errors, to add `v:throwpoint` after
             "                                     │ `v:exception`
