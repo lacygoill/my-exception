@@ -9,6 +9,6 @@ let g:loaded_stacktrace = 1
 "              errors, as long as they are less than 5 lines away from each
 "              other in the message log
 
-com! -nargs=? WTF call stacktrace#qfl(<args>)
+com! -nargs=? WTF call stacktrace#main(<args>)
 "           │
 "           └─ 3 is used by default

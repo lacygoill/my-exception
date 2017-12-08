@@ -50,31 +50,11 @@ let g:autoloaded_stacktrace = 1
 
 " Then, press `cd`, and execute `:WTF`.
 
-fu! stacktrace#qfl(...) abort "{{{1
-
-    " TV for `errors`:
-    "         [
-    "         \  {'stack': ['FuncB[34]', 'FuncA[12]'],
-    "         \  'msg' :   'E492: Not an editor command:     abcd'},
-    "         \
-    "         \  {'stack': ['<SNR>3_FuncD[78]', 'FuncC[56]' ],
-    "         \  'msg' :   'E492: Not an editor command:     efgh'},
-    "         ]
-    "
-    " In this fictitious example, 2 errors occurred in FuncB() and s:FuncD(),
-    " and the chains of calls were:
-    "         FuncA → FuncB
-    "         FuncC → s:FuncD
-    let l:errors = s:get_raw_trace(get(a:000, 0, 3))
-
-    if empty(l:errors)
-        return
-    endif
-
+fu! s:build_qfl(errors) abort "{{{1
     let qfl = []
 
     " iterate over the errors (there could be only one)
-    for err in l:errors
+    for err in a:errors
         " we use `i` to index the position of a function call in the stack trace
         let i = 0
 
@@ -205,19 +185,7 @@ fu! stacktrace#qfl(...) abort "{{{1
         endfor
     endfor
 
-    " populate the qfl
-    if !empty(qfl)
-        call map(qfl, { i,v -> extend(v, {'valid': 1}) })
-        call setqflist(qfl)
-        call setqflist([], 'a', { 'title': 'Stack trace(s)' })
-        doautocmd QuickFixCmdPost grep
-        if &l:buftype !=# 'quickfix'
-            return
-        endif
-        " hide noise (double bar in front of error message)
-        setl concealcursor=nc conceallevel=3
-        call matchadd('Conceal', '^||', 0, -1, {'conceal': 'x'})
-    endif
+    return qfl
 endfu
 
 fu! s:get_raw_trace(...) abort "{{{1
@@ -343,4 +311,81 @@ fu! s:get_raw_trace(...) abort "{{{1
     endwhile
 
     return l:errors
+endfu
+
+fu! stacktrace#main(...) abort "{{{1
+    " Why temporarily reset 'isk'?{{{
+    "
+    " If we execute  `:WTF` from a help  buffer, we may fail  to correctly parse
+    " the error messages. Indeed, at one point, we use the anchor `>` in a regex
+    " pattern:
+    "         let pat .= name.'>'
+    "
+    " It means  that the previous character  is the last in  'isk'. And that the
+    " next one must be outside 'isk'. But  in a help buffer, 'isk' contains this
+    " value:
+    "         !-~
+    "
+    " It includes the open parenthesis, which  will make our regex fail to match
+    " the name of the function where an error occurred: the parenthesis will be,
+    " wrongly included inside the regex.
+    "}}}
+    " Can this issue be encountered elsewhere?{{{
+    "
+    " A function whose purpose is to modify the current buffer is fine,
+    " because it probably needs to take the buffer settings into account.
+    "
+    " But, every time we write a  function which implements some abstract logic,
+    " not tied to any buffer in  particular, the logic can, wrongly, be affected
+    " by the - irrelevant - current buffer settings.
+    "}}}
+    let isk_save = &l:isk
+
+    try
+        setl isk=@,48-57,192-255,#
+
+        " TV for `errors`:
+        "         [
+        "         \  {'stack': ['FuncB[34]', 'FuncA[12]'],
+        "         \  'msg' :   'E492: Not an editor command:     abcd'},
+        "         \
+        "         \  {'stack': ['<SNR>3_FuncD[78]', 'FuncC[56]' ],
+        "         \  'msg' :   'E492: Not an editor command:     efgh'},
+        "         ]
+        "
+        " In this fictitious example, 2 errors occurred in FuncB() and s:FuncD(),
+        " and the chains of calls were:
+        "         FuncA → FuncB
+        "         FuncC → s:FuncD
+        let l:errors = s:get_raw_trace(get(a:000, 0, 3))
+
+        if empty(l:errors)
+            return
+        endif
+
+        let qfl = s:build_qfl(l:errors)
+        if empty(qfl)
+            return
+        endif
+
+        call s:populate_qfl(qfl)
+
+    catch
+        call my_lib#catch_error()
+    finally
+        let &l:isk = isk_save
+    endtry
+endfu
+
+fu! s:populate_qfl(qfl) abort "{{{1
+    call map(a:qfl, { i,v -> extend(v, {'valid': 1}) })
+    call setqflist(a:qfl)
+    call setqflist([], 'a', { 'title': 'Stack trace(s)' })
+    doautocmd QuickFixCmdPost grep
+    if &l:buftype !=# 'quickfix'
+        return
+    endif
+    " hide noise (double bar in front of error message)
+    setl concealcursor=nc conceallevel=3
+    call matchadd('Conceal', '^||', 0, -1, {'conceal': 'x'})
 endfu
