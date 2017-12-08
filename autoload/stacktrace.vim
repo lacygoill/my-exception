@@ -261,18 +261,7 @@ fu! s:get_raw_trace(...) abort "{{{1
 
             " … then get the line address in the innermost function where the
             " error occurred
-            "                                     ┌ used by `my_lib#catch_error()`
-            "                                     │ when it catches an error and we've enabled
-            "                                     │ verbose errors, to add `v:throwpoint` after
-            "                                     │ `v:exception`
-            "                                     │
-            "                                     │ IOW, inside a `catch` clause, we may use `@@@`
-            "                                     │ as a custom delimiter between the error message
-            "                                     │ and the location of its origin
-            "                                   ┌─┤
-            let l:lnum = stridx(msgs[i-2], '    @@@ function') >= 0
-            \?               matchstr(msgs[i-2], '\d\+$')
-            \:               matchstr(msgs[i-1], '\d\+')
+            let l:lnum = matchstr(msgs[i-1], '\d\+')
 
             " … and the stack of function calls leading to the error
             let partial_stack = matchstr(msgs[i], '\vError detected while processing %(function )?\zs.*\ze:$')
