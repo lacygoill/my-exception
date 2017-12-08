@@ -82,16 +82,16 @@ fu! stacktrace#qfl(...) abort "{{{1
 
         " add the error message to the qfl
         call add(qfl, {
-                      \ 'text':  err.msg,
-                      \ 'lnum':  0,
-                      \ 'bufnr': 0,
-                      \ })
+        \               'text':  err.msg,
+        \               'lnum':  0,
+        \               'bufnr': 0,
+        \             })
 
         " Now, we need to add to the qfl, the function calls which lead to the error.
         " And for each of them, we need to find out where it was made:
         "
-        "         - which file
-        "         - which line of the file (!= line of the function)
+        "         • which file
+        "         • which line of the file (!= line of the function)
         "
         " TV for `err.stack`:    [ 'FuncB[34]', 'FuncA[12]' ]
         " TV for `call`:           'FuncB[34]'
@@ -115,10 +115,10 @@ fu! stacktrace#qfl(...) abort "{{{1
             " a ftplugin; put a garbage command in one of them to reproduce
             if name =~# '[/.]'
                 call add(qfl, {
-                              \   'text':     '',
-                              \   'filename': name,
-                              \   'lnum':     l:lnum,
-                              \ })
+                \               'text':     '',
+                \               'filename': name,
+                \               'lnum':     l:lnum,
+                \             })
                 " there's no chain of calls, the only error comes from this file
                 continue
             else
@@ -196,10 +196,10 @@ fu! stacktrace#qfl(...) abort "{{{1
             "         '0. Func[12]'
 
             call add(qfl, {
-                          \   'text':     printf('%s. %s', i, call),
-                          \   'filename': src,
-                          \   'lnum':     l:lnum,
-                          \ })
+            \               'text':     printf('%s. %s', i, call),
+            \               'filename': src,
+            \               'lnum':     l:lnum,
+            \             })
 
             " increment `i` to update the index of the next function call in
             " the stack
@@ -241,8 +241,9 @@ fu! s:get_raw_trace(...) abort "{{{1
         return
     endif
 
-    "     ┌─ initialize index of the message processed in the next loop
-    "     │  ┌─ initialize index of the last message where an error occurred
+    "     ┌─ index of the message processed in the next loop
+    "     │
+    "     │  ┌─ index of the last message where an error occurred
     "     │  │
     let [ i, e, l:errors ] = [ 0, 0, [] ]
     "           │
@@ -256,11 +257,22 @@ fu! s:get_raw_trace(...) abort "{{{1
         " if a message begins with “Error detected while processing “
         " and the previous one with “line {some_number}“
         if i > 1 && msgs[i]   =~# '^Error detected while processing '
-               \ && msgs[i-1] =~? '\v^line\s+\d+'
+        \        && msgs[i-1] =~? '\v^line\s+\d+'
 
             " … then get the line address in the innermost function where the
             " error occurred
-            let l:lnum = matchstr(msgs[i-1], '\d\+')
+            "                                     ┌ used by `my_lib#catch_error_in_op_function()`
+            "                                     │ when it catches an error and we've enabled
+            "                                     │ verbose errors, to add `v:throwpoint` after
+            "                                     │ `v:exception`
+            "                                     │
+            "                                     │ IOW, inside a `catch` clause, we may use `@@@`
+            "                                     │ as a custom delimiter between the error message
+            "                                     │ and the location of its origin
+            "                                   ┌─┤
+            let l:lnum = stridx(msgs[i-2], '    @@@ function') >= 0
+            \?               matchstr(msgs[i-2], '\d\+$')
+            \:               matchstr(msgs[i-1], '\d\+')
 
             " … and the stack of function calls leading to the error
             let partial_stack = matchstr(msgs[i], '\vError detected while processing %(function )?\zs.*\ze:$')
@@ -276,7 +288,7 @@ fu! s:get_raw_trace(...) abort "{{{1
             "
             " TV for `stack`:    function FuncA[12]..FuncB[34]..FuncC[56]
 
-            " Now that we have the stack as a string, we:
+            " Now that we have the stack as a string, we need to:
             "
             "       1. convert it into a list
             "       2. store it into a dictionary
@@ -295,9 +307,9 @@ fu! s:get_raw_trace(...) abort "{{{1
             "         msgs[i]   = Error detected while processing …:
             ""}}}
             call add(l:errors, {
-                               \  'stack': reverse(split(stack, '\.\.')),
-                               \  'msg':   msgs[i-2],
-                               \ })
+            \                    'stack': reverse(split(stack, '\.\.')),
+            \                    'msg':   msgs[i-2],
+            \                  })
 
             " remember the index of the message in the log where an error occurred
             let e = i
