@@ -371,7 +371,7 @@ fu! stacktrace#main(...) abort "{{{1
         call s:populate_qfl(qfl)
 
     catch
-        call my_lib#catch_error()
+        return my_lib#catch_error()
     finally
         let &l:isk = isk_save
     endtry
