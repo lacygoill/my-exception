@@ -54,11 +54,11 @@ fu! stacktrace#qfl(...) abort "{{{1
 
     " TV for `errors`:
     "         [
-    "         \   {'stack': ['FuncB[34]', 'FuncA[12]'],
-    "         \   'msg' :   'E492: Not an editor command:     abcd'},
+    "         \  {'stack': ['FuncB[34]', 'FuncA[12]'],
+    "         \  'msg' :   'E492: Not an editor command:     abcd'},
     "         \
-    "         \   {'stack': ['<SNR>3_FuncD[78]', 'FuncC[56]' ],
-    "         \   'msg' :   'E492: Not an editor command:     efgh'},
+    "         \  {'stack': ['<SNR>3_FuncD[78]', 'FuncC[56]' ],
+    "         \  'msg' :   'E492: Not an editor command:     efgh'},
     "         ]
     "
     " In this fictitious example, 2 errors occurred in FuncB() and s:FuncD(),
@@ -67,12 +67,10 @@ fu! stacktrace#qfl(...) abort "{{{1
     "         FuncC → s:FuncD
     let l:errors = s:get_raw_trace(get(a:000, 0, 3))
 
-    " if there aren't any error, return
     if empty(l:errors)
         return
     endif
 
-    " initialize the qfl
     let qfl = []
 
     " iterate over the errors (there could be only one)
