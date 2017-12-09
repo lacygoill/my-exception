@@ -385,7 +385,6 @@ fu! s:populate_qfl(qfl) abort "{{{1
     if &l:buftype !=# 'quickfix'
         return
     endif
-    " hide noise (double bar in front of error message)
-    setl concealcursor=nc conceallevel=3
-    call matchadd('Conceal', '^||', 0, -1, {'conceal': 'x'})
+    call qf#set_matches('stacktrace:populate_qfl', 'Conceal', 'double_bar')
+    call qf#create_matches()
 endfu
