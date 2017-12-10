@@ -373,10 +373,9 @@ fu! stacktrace#main(...) abort "{{{1
 endfu
 
 fu! s:populate_qfl(qfl) abort "{{{1
-    call map(a:qfl, { i,v -> extend(v, {'valid': 1}) })
     call setqflist(a:qfl)
     call setqflist([], 'a', { 'title': 'Stack trace(s)' })
-    doautocmd <nomodeline> QuickFixCmdPost grep
+    doautocmd <nomodeline> QuickFixCmdPost copen
     if &l:buftype !=# 'quickfix'
         return
     endif
