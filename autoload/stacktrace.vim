@@ -309,7 +309,9 @@ fu! s:get_raw_trace(...) abort "{{{1
 endfu
 
 fu! stacktrace#main(...) abort "{{{1
-    " Why temporarily reset 'isk'?{{{
+    " Why did we previously temporarily reset 'isk' at the start of this function? {{{
+    "
+    " Old_explanation:
     "
     " If we execute  `:WTF` from a help  buffer, we may fail  to correctly parse
     " the error messages. Indeed, at one point, we use the anchor `>` in a regex
@@ -338,45 +340,33 @@ fu! stacktrace#main(...) abort "{{{1
     "
     " No. The old pattern (where `>` was used) was not reliable.
     " The new one doesn't include `>` anymore.
-    " We still reset 'isk', because better be safe than sorry, and
-    " as a reminder that it could be useful in other scripts.
     "}}}
-    let isk_save = &l:isk
 
-    try
-        setl isk=@,48-57,192-255,#
+    " TV for `errors`:
+    "         [
+    "         \  {'stack': ['FuncB[34]', 'FuncA[12]'],
+    "         \  'msg' :   'E492: Not an editor command:     abcd'},
+    "         \
+    "         \  {'stack': ['<SNR>3_FuncD[78]', 'FuncC[56]' ],
+    "         \  'msg' :   'E492: Not an editor command:     efgh'},
+    "         ]
+    "
+    " In this fictitious example, 2 errors occurred in FuncB() and s:FuncD(),
+    " and the chains of calls were:
+    "         FuncA → FuncB
+    "         FuncC → s:FuncD
+    let l:errors = s:get_raw_trace(get(a:000, 0, 3))
 
-        " TV for `errors`:
-        "         [
-        "         \  {'stack': ['FuncB[34]', 'FuncA[12]'],
-        "         \  'msg' :   'E492: Not an editor command:     abcd'},
-        "         \
-        "         \  {'stack': ['<SNR>3_FuncD[78]', 'FuncC[56]' ],
-        "         \  'msg' :   'E492: Not an editor command:     efgh'},
-        "         ]
-        "
-        " In this fictitious example, 2 errors occurred in FuncB() and s:FuncD(),
-        " and the chains of calls were:
-        "         FuncA → FuncB
-        "         FuncC → s:FuncD
-        let l:errors = s:get_raw_trace(get(a:000, 0, 3))
+    if empty(l:errors)
+        return
+    endif
 
-        if empty(l:errors)
-            return
-        endif
+    let qfl = s:build_qfl(l:errors)
+    if empty(qfl)
+        return
+    endif
 
-        let qfl = s:build_qfl(l:errors)
-        if empty(qfl)
-            return
-        endif
-
-        call s:populate_qfl(qfl)
-
-    catch
-        return my_lib#catch_error()
-    finally
-        let &l:isk = isk_save
-    endtry
+    call s:populate_qfl(qfl)
 endfu
 
 fu! s:populate_qfl(qfl) abort "{{{1
