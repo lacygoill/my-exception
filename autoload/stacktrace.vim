@@ -334,6 +334,13 @@ fu! stacktrace#main(...) abort "{{{1
     " not tied to any buffer in  particular, the logic can, wrongly, be affected
     " by the - irrelevant - current buffer settings.
     "}}}
+    " Do we still need to do this?{{{
+    "
+    " No. The old pattern (where `>` was used) was not reliable.
+    " The new one doesn't include `>` anymore.
+    " We still reset 'isk', because better be safe than sorry, and
+    " as a reminder that it could be useful in other scripts.
+    "}}}
     let isk_save = &l:isk
 
     try
