@@ -143,7 +143,7 @@ fu! s:build_qfl(errors) abort "{{{1
                 let name = matchstr(name, '\v\<SNR\>\d+_\zs.+')
             endif
             " add the name of the function
-            let pat .= name.'>'
+            let pat .= name.'\('
 
             " the function call was made on some line of the source file
             " find which one
