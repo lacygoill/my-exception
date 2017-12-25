@@ -373,7 +373,7 @@ fu! s:populate_qfl(qfl) abort "{{{1
     call setqflist(a:qfl)
     call setqflist([], 'a', { 'title': 'Stack trace(s)' })
     doautocmd <nomodeline> QuickFixCmdPost copen
-    if &l:buftype !=# 'quickfix'
+    if &bt !=# 'quickfix'
         return
     endif
     call qf#set_matches('stacktrace:populate_qfl', 'Conceal', 'double_bar')
