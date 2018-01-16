@@ -12,3 +12,5 @@ let g:loaded_stacktrace = 1
 com! -nargs=? WTF call stacktrace#main(<args>)
 "           │
 "           └─ 3 is used by default
+
+nno  <silent><unique>  !w  :<c-u>call stacktrace#main()<cr>
