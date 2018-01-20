@@ -358,9 +358,7 @@ fu! stacktrace#main(...) abort "{{{1
     let l:errors = s:get_raw_trace(get(a:000, 0, 3))
 
     if empty(l:errors)
-        echohl ErrorMsg
         echo '[stacktrace] no stack trace in :messages'
-        echohl NONE
         return
     endif
 
