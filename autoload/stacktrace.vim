@@ -377,7 +377,7 @@ fu! s:populate_qfl(qfl) abort "{{{1
     call setqflist(a:qfl)
     call setqflist([], 'a', { 'title': 'WTF' })
     doautocmd <nomodeline> QuickFixCmdPost copen
-    if &bt !=# 'quickfix'
+    if &bt isnot# 'quickfix'
         return
     endif
     call qf#set_matches('stacktrace:populate_qfl', 'Conceal', 'double_bar')
