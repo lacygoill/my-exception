@@ -308,7 +308,7 @@ fu! s:get_raw_trace(...) abort "{{{1
     return l:errors
 endfu
 
-fu! stacktrace#main(...) abort "{{{1
+fu! stacktrace#main(lvl) abort "{{{1
     " Why did we previously temporarily reset 'isk' at the start of this function? {{{
     "
     " Old_explanation:
@@ -355,7 +355,7 @@ fu! stacktrace#main(...) abort "{{{1
     " and the chains of calls were:
     "         FuncA → FuncB
     "         FuncC → s:FuncD
-    let l:errors = s:get_raw_trace(get(a:000, 0, 3))
+    let l:errors = s:get_raw_trace(a:lvl)
 
     if empty(l:errors)
         echo '[stacktrace] no stack trace in :messages'
