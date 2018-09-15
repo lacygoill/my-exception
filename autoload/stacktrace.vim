@@ -55,10 +55,10 @@ fu! s:build_qfl(errors) abort "{{{1
 
         " add the error message to the qfl
         call add(qfl, {
-        \               'text':  err.msg,
-        \               'lnum':  0,
-        \               'bufnr': 0,
-        \             })
+                    \   'text':  err.msg,
+                    \   'lnum':  0,
+                    \   'bufnr': 0,
+                    \ })
 
         " Now, we need to add to the qfl, the function calls which lead to the error.
         " And for each of them, we need to find out where it was made:
@@ -88,10 +88,10 @@ fu! s:build_qfl(errors) abort "{{{1
             " a ftplugin; put a garbage command in one of them to reproduce
             if name =~# '[/.]'
                 call add(qfl, {
-                \               'text':     '',
-                \               'filename': name,
-                \               'lnum':     l:lnum,
-                \             })
+                            \   'text':     '',
+                            \   'filename': name,
+                            \   'lnum':     l:lnum,
+                            \ })
                 " there's no chain of calls, the only error comes from this file
                 continue
             else
@@ -115,44 +115,13 @@ fu! s:build_qfl(errors) abort "{{{1
 
             " expand the full path of the source file from which the function
             " call was made
-            let src = fnamemodify(matchstr(def[1], '\vLast set from \zs.+'), ':p')
+            let src = fnamemodify(matchstr(def[1], '\vLast set from \zs.+\ze line \d+'), ':p')
             " if it's not readable, we won't be able to visit it from the qfl,
             " so, again, process next function call in the stack
             if !filereadable(src)
                 continue
             endif
-
-            " build a pattern to match a line beginning with:
-            "     function! FuncA
-            " … or
-            "     function! s:FuncA
-            " … or
-            "     function! <sid>FuncA
-
-            " 1st part of the pattern (before the name of the function)
-            let pat = '\v\C^\s*fu%[nction]!?\s+'
-
-            " if the function is script-local, we can't add the raw function
-            " name (with `<SNR>`), because that's not how it was written in the
-            " source file
-            if name =~# '^<SNR>'
-                " add the 3 possible script-local prefix that the author of
-                " the plugin could have used:    `s:`, `<sid>`, `<SID>`
-                let pat .= '%(\<%(sid|SID)\>|s:)'
-                " get the name of the function without `<SNR>3_`
-                let name = matchstr(name, '\v\<SNR\>\d+_\zs.+')
-            endif
-            " add the name of the function
-            let pat .= name.'\('
-
-            " the function call was made on some line of the source file
-            " find which one
-            for line in readfile(src)
-                let l:lnum += 1
-                if line =~# pat
-                    break
-                endif
-            endfor
+            let l:lnum = fnamemodify(matchstr(def[1], '\vLast set from .+ line \zs\d+'), ':p')
 
             " Finally, we can add an entry for the function call.
             " We have its filename with `src`.
@@ -169,10 +138,10 @@ fu! s:build_qfl(errors) abort "{{{1
             "         '0. Func[12]'
 
             call add(qfl, {
-            \               'text':     printf('%s. %s', i, call),
-            \               'filename': src,
-            \               'lnum':     l:lnum,
-            \             })
+                        \   'text':     printf('%s. %s', i, call),
+                        \   'filename': src,
+                        \   'lnum':     l:lnum,
+                        \ })
 
             " increment `i` to update the index of the next function call in
             " the stack
@@ -257,9 +226,9 @@ fu! s:get_raw_trace(...) abort "{{{1
             "         msgs[i]   = Error detected while processing …:
             ""}}}
             call add(l:errors, {
-            \                    'stack': reverse(split(stack, '\.\.')),
-            \                    'msg':   msgs[i-2],
-            \                  })
+                             \   'stack': reverse(split(stack, '\.\.')),
+                             \   'msg':   msgs[i-2],
+                             \ })
 
             " remember the index of the message in the log where an error occurred
             let e = i
