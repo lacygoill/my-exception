@@ -121,7 +121,7 @@ fu! s:build_qfl(errors) abort "{{{1
             if !filereadable(src)
                 continue
             endif
-            let l:lnum = fnamemodify(matchstr(def[1], '\vLast set from .+ line \zs\d+'), ':p')
+            let l:lnum += matchstr(def[1], '\vLast set from .+ line \zs\d+')
 
             " Finally, we can add an entry for the function call.
             " We have its filename with `src`.
