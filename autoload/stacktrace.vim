@@ -66,8 +66,8 @@ fu! s:build_qfl(errors) abort "{{{1
         "         • which file
         "         • which line of the file (!= line of the function)
         "
-        " TV for `err.stack`:    [ 'FuncB[34]', 'FuncA[12]' ]
-        " TV for `call`:           'FuncB[34]'
+        " TV for `err.stack`:    ['FuncB[34]', 'FuncA[12]']
+        " TV for `call`:          'FuncB[34]'
         for call in err.stack
             " TV: 'FuncB'
             let name = matchstr(call, '\v.{-}\ze\[\d+\]$')
@@ -96,12 +96,12 @@ fu! s:build_qfl(errors) abort "{{{1
                 continue
             else
                 " TV:
-                "     [ '   function FuncB()',
-                "     \ '    Last set from ~/.vim/vimrc',
-                "     \ …,
-                "     \ '34    abcd',
-                "     \ …,
-                "     \ '   endfunction']
+                "     ['   function FuncB()',
+                "    \ '    Last set from ~/.vim/vimrc',
+                "    \ …,
+                "    \ '34    abcd',
+                "    \ …,
+                "    \ '   endfunction']
                 let def = split(execute('verb function '.name, 'silent!'), '\n')
             endif
 
@@ -171,15 +171,15 @@ fu! s:get_raw_trace(...) abort "{{{1
         return
     endif
 
-    "     ┌─ index of the message processed in the next loop
-    "     │
-    "     │  ┌─ index of the last message where an error occurred
-    "     │  │
-    let [ i, e, l:errors ] = [ 0, 0, [] ]
+    "    ┌ index of the message processed in the next loop
+    "    │
+    "    │  ┌ index of the last message where an error occurred
+    "    │  │
+    let [i, e, l:errors] = [0, 0, []]
     "           │
-    "           └─ list of errors built in the next loop;
-    "              each error will be a dictionary containing 2 keys,
-    "              whose values will be a stack and a message
+    "           └ list of errors built in the next loop;
+    "             each error will be a dictionary containing 2 keys,
+    "             whose values will be a stack and a message
 
     " iterate over the messages in the log
     while i < len(msgs)
@@ -215,7 +215,7 @@ fu! s:get_raw_trace(...) abort "{{{1
             "       4. add the dictionary to a list of all errors found so far
 
             " TV for the `stack` key: {{{
-            "         [ 'FuncA[12]', 'FuncB[34]', 'FuncC[56]' ]
+            "         ['FuncA[12]', 'FuncB[34]', 'FuncC[56]']
             "
             " TV for the `msg` key:
             "         E492: Not an editor command:     abcd
