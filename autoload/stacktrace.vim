@@ -313,11 +313,11 @@ fu! stacktrace#main(lvl) abort "{{{1
 
     " TV for `errors`:
     "         [
-    "         \  {'stack': ['FuncB[34]', 'FuncA[12]'],
-    "         \  'msg' :   'E492: Not an editor command:     abcd'},
+    "         \ {'stack': ['FuncB[34]', 'FuncA[12]'],
+    "         \  'msg' : 'E492: Not an editor command:     abcd'},
     "         \
-    "         \  {'stack': ['<SNR>3_FuncD[78]', 'FuncC[56]' ],
-    "         \  'msg' :   'E492: Not an editor command:     efgh'},
+    "         \ {'stack': ['<SNR>3_FuncD[78]', 'FuncC[56]'],
+    "         \  'msg' : 'E492: Not an editor command:     efgh'},
     "         ]
     "
     " In this fictitious example, 2 errors occurred in FuncB() and s:FuncD(),
