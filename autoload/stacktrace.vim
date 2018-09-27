@@ -79,7 +79,7 @@ fu! s:build_qfl(errors) abort "{{{1
             endif
 
             " TV: '34'
-            let l:lnum = str2nr(matchstr(call, '\v\[\zs\d+\ze\]$'))
+            let lnum = str2nr(matchstr(call, '\v\[\zs\d+\ze\]$'))
 
             " if the name of a function contains a slash, or a dot, it's
             " not a function, it's a file
@@ -90,7 +90,7 @@ fu! s:build_qfl(errors) abort "{{{1
                 call add(qfl, {
                             \   'text':     '',
                             \   'filename': name,
-                            \   'lnum':     l:lnum,
+                            \   'lnum':     lnum,
                             \ })
                 " there's no chain of calls, the only error comes from this file
                 continue
@@ -121,11 +121,11 @@ fu! s:build_qfl(errors) abort "{{{1
             if !filereadable(src)
                 continue
             endif
-            let l:lnum += matchstr(def[1], '\vLast set from .+ line \zs\d+')
+            let lnum += matchstr(def[1], '\vLast set from .+ line \zs\d+')
 
             " Finally, we can add an entry for the function call.
             " We have its filename with `src`.
-            " We have its line address with `l:lnum`.
+            " We have its line address with `lnum`.
             " And we can generate a simple text with:
             "
             "         printf('%s. %s', i, call),
@@ -140,7 +140,7 @@ fu! s:build_qfl(errors) abort "{{{1
             call add(qfl, {
                         \   'text':     printf('%s. %s', i, call),
                         \   'filename': src,
-                        \   'lnum':     l:lnum,
+                        \   'lnum':     lnum,
                         \ })
 
             " increment `i` to update the index of the next function call in
@@ -191,14 +191,14 @@ fu! s:get_raw_trace(...) abort "{{{1
 
             " … then get the line address in the innermost function where the
             " error occurred
-            let l:lnum = matchstr(msgs[i-1], '\d\+')
+            let lnum = matchstr(msgs[i-1], '\d\+')
 
             " … and the stack of function calls leading to the error
             let partial_stack = matchstr(msgs[i], '\vError detected while processing %(function )?\zs.*\ze:$')
 
             " combine `lnum` and `partial_stack` to build a string describing
             " the complete stack
-            let stack = printf('%s[%d]', partial_stack, l:lnum)
+            let stack = printf('%s[%d]', partial_stack, lnum)
             "                     └──┤
             "                        └ add the address of the line where the
             "                          innermost error occurred (ex: 56),
