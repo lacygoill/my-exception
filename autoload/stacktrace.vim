@@ -278,40 +278,7 @@ fu! s:get_raw_trace(...) abort "{{{1
 endfu
 
 fu! stacktrace#main(lvl) abort "{{{1
-    " Why did we previously temporarily reset 'isk' at the start of this function? {{{
-    "
-    " Old_explanation:
-    "
-    " If we execute  `:WTF` from a help  buffer, we may fail  to correctly parse
-    " the error messages. Indeed, at one point, we use the anchor `>` in a regex
-    " pattern:
-    "         let pat .= name.'>'
-    "
-    " It means  that the previous character  is the last in  'isk'. And that the
-    " next one must be outside 'isk'. But  in a help buffer, 'isk' contains this
-    " value:
-    "         !-~
-    "
-    " It includes the open parenthesis, which  will make our regex fail to match
-    " the name of the function where an error occurred: the parenthesis will be,
-    " wrongly included inside the regex.
-    "}}}
-    " Can this issue be encountered elsewhere?{{{
-    "
-    " A function whose purpose is to modify the current buffer is fine,
-    " because it probably needs to take the buffer settings into account.
-    "
-    " But, every time we write a  function which implements some abstract logic,
-    " not tied to any buffer in  particular, the logic can, wrongly, be affected
-    " by the - irrelevant - current buffer settings.
-    "}}}
-    " Do we still need to do this?{{{
-    "
-    " No. The old pattern (where `>` was used) was not reliable.
-    " The new one doesn't include `>` anymore.
-    "}}}
-
-    " TV for `errors`:
+    " TV for `errors`:{{{
     "         [
     "         \ {'stack': ['FuncB[34]', 'FuncA[12]'],
     "         \  'msg' : 'E492: Not an editor command:     abcd'},
@@ -324,6 +291,7 @@ fu! stacktrace#main(lvl) abort "{{{1
     " and the chains of calls were:
     "         FuncA → FuncB
     "         FuncC → s:FuncD
+    "}}}
     let l:errors = s:get_raw_trace(a:lvl)
 
     if empty(l:errors)
