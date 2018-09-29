@@ -9,6 +9,6 @@ let g:loaded_stacktrace = 1
 "              errors, as long as they are less than 5 lines away from each
 "              other in the message log
 
-com! -nargs=? WTF call stacktrace#main(<q-args> isnot# '' ? <q-args> : 3)
+com! -bar -nargs=? WTF call stacktrace#main(<q-args> isnot# '' ? <q-args> : 3)
 
 nno  <silent><unique>  !w  :<c-u>call stacktrace#main(v:count ? v:count : 3)<cr>
