@@ -63,8 +63,8 @@ fu! s:build_qfl(errors) abort "{{{1
         " Now, we need to add to the qfl, the function calls which lead to the error.
         " And for each of them, we need to find out where it was made:
         "
-        "         • which file
-        "         • which line of the file (!= line of the function)
+        "         - which file
+        "         - which line of the file (!= line of the function)
         "
         " TV for `err.stack`:    ['FuncB[34]', 'FuncA[12]']
         " TV for `call`:          'FuncB[34]'
