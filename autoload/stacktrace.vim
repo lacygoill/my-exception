@@ -158,8 +158,8 @@ fu! s:get_raw_trace(...) abort "{{{1
     " get the log messages
     "
     " for some reason, `execute()` sometimes produces  ┐
-    " 1 or several consecutive empty line(s)           │
-    " even though they aren't there in the output of   │
+    " 1 or several consecutive empty line(s)         │
+    " even though they aren't there in the output of │
     " `:messages`                                      │
     let msgs = reverse(split(execute('messages'), '\n\+'))
     "          │
