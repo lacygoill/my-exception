@@ -16,12 +16,11 @@
 " extends up to the function where the failure occurred (but was not necessarily
 " caused).
 "
-" For more info:
-"         https://en.wikipedia.org/wiki/Stack_trace
+" For more info: https://en.wikipedia.org/wiki/Stack_trace
 
 " Test {{{1
 "
-" To test the stacktrace#qfl() function, install the following `cd` mapping
+" To test  the `stacktrace#qfl()` function,  install the following  `cd` mapping
 " and the `FuncA()`, `FuncB()`, `FuncC()`, `FuncD()` functions:
 
 "        nno cd :call FuncA()<cr>
@@ -54,26 +53,23 @@ fu! s:build_qfl(errors) abort "{{{1
         let i = 0
 
         " add the error message to the qfl
-        call add(qfl, {
-                    \   'text':  err.msg,
-                    \   'lnum':  0,
-                    \   'bufnr': 0,
-                    \ })
+        call add(qfl, {'text': err.msg, 'lnum': 0, 'bufnr': 0})
 
-        " Now, we need to add to the qfl, the function calls which lead to the error.
+        " Now, we need to add to the qfl, the function calls which lead to the error.{{{
+        "
         " And for each of them, we need to find out where it was made:
         "
-        "         - which file
-        "         - which line of the file (!= line of the function)
+        "    - which file
+        "    - which line of the file (!= line of the function)
         "
         " TV for `err.stack`:    ['FuncB[34]', 'FuncA[12]']
         " TV for `call`:          'FuncB[34]'
+        "}}}
         for call in err.stack
             " TV: 'FuncB'
             let name = matchstr(call, '\v.{-}\ze\[\d+\]$')
 
-            " if we don't have a function name, process next function call in
-            " the stack
+            " if we don't have a function name, process next function call in the stack
             if empty(name)
                 continue
             endif
@@ -87,21 +83,18 @@ fu! s:build_qfl(errors) abort "{{{1
             " it happens when the error occurred in a sourced file, like
             " a ftplugin; put a garbage command in one of them to reproduce
             if name =~# '[/.]'
-                call add(qfl, {
-                            \   'text':     '',
-                            \   'filename': name,
-                            \   'lnum':     lnum,
-                            \ })
+                call add(qfl, {'text': '', 'filename': name, 'lnum': lnum})
                 " there's no chain of calls, the only error comes from this file
                 continue
             else
-                " TV:
-                "     ['   function FuncB()',
-                "    \ '    Last set from ~/.vim/vimrc',
-                "    \ …,
-                "    \ '34    abcd',
-                "    \ …,
-                "    \ '   endfunction']
+                " TV:{{{
+                "      ['   function FuncB()',
+                "     \ '    Last set from ~/.vim/vimrc',
+                "     \ ...,
+                "     \ '34    abcd',
+                "     \ ...,
+                "     \ '   endfunction']
+                "}}}
                 let def = split(execute('verb function '.name, 'silent!'), '\n')
             endif
 
@@ -113,38 +106,78 @@ fu! s:build_qfl(errors) abort "{{{1
                 continue
             endif
 
-            " expand the full path of the source file from which the function
-            " call was made
-            let src = fnamemodify(matchstr(def[1], '\vLast set from \zs.+\ze line \d+'), ':p')
-            " if it's not readable, we won't be able to visit it from the qfl,
-            " so, again, process next function call in the stack
-            if !filereadable(src)
-                continue
-            endif
-            let lnum += matchstr(def[1], '\vLast set from .+ line \zs\d+')
+            if !has('nvim')
+                " expand the full path of the source file from which the function call was made
+                let src = fnamemodify(matchstr(def[1], '\vLast set from \zs.+\ze line \d+'), ':p')
+                " if it's not readable, we won't be able to visit it from the qfl,
+                " so, again, process next function call in the stack
+                if !filereadable(src)
+                    continue
+                endif
+                let lnum += matchstr(def[1], '\vLast set from .+ line \zs\d+')
+            else
+                " TODO: Remove this `else` clause and the `if !has('nvim')` once Nvim has merged 8.1.0362.{{{
+                "
+                " https://github.com/vim/vim/releases/tag/v8.1.0362
+                "}}}
+                let src = fnamemodify(matchstr(def[1], '\vLast set from \zs.+'), ':p')
+                if !filereadable(src)
+                    continue
+                endif
 
-            " Finally, we can add an entry for the function call.
+                " build a pattern to match a line beginning with:
+                "     function! FuncA
+                " ... or
+                "     function! s:FuncA
+                " ... or
+                "     function! <sid>FuncA
+
+                " 1st part of the pattern (before the name of the function)
+                let pat = '\v\C^\s*fu%[nction]!?\s+'
+                " if the function is script-local, we can't add the raw function
+                " name (with `<SNR>`), because that's  not how it was written in
+                " the source file
+                if name =~# '^<SNR>'
+                    " add the 3 possible script-local prefix that the author of
+                    " the plugin could have used:    `s:`, `<sid>`, `<SID>`
+                    let pat .= '%(\<%(sid|SID)\>|s:)'
+                    " get the name of the function without `<SNR>3_`
+                    let name = matchstr(name, '\v\<SNR\>\d+_\zs.+')
+                endif
+                " add the name of the function
+                let pat .= name.'\('
+                " the function call was made on some line of the source file find which one
+                for line in readfile(src)
+                    let lnum += 1
+                    if line =~# pat
+                        break
+                    endif
+                endfor
+            endif
+
+            " Finally, we can add an entry for the function call.{{{
+            "
             " We have its filename with `src`.
             " We have its line address with `lnum`.
             " And we can generate a simple text with:
             "
-            "         printf('%s. %s', i, call),
-            "                 │   │
-            "                 │   └─ function call; ex: 'FuncA[12]'
-            "                 └─ index of the function call in the stack
-            "                    the lower, the deeper
+            "     printf('%s. %s', i, call),
+            "             │   │
+            "             │   └─ function call; ex: 'FuncA[12]'
+            "             └─ index of the function call in the stack
+            "                the lower, the deeper
             "
             " The final text could be sth like:
-            "         '0. Func[12]'
-
+            "
+            "     '0. Func[12]'
+            "}}}
             call add(qfl, {
                         \   'text':     printf('%s. %s', i, call),
                         \   'filename': src,
                         \   'lnum':     lnum,
                         \ })
 
-            " increment `i` to update the index of the next function call in
-            " the stack
+            " increment `i` to update the index of the next function call in the stack
             let i += 1
         endfor
     endfor
