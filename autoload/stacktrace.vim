@@ -242,10 +242,10 @@ fu! s:get_raw_trace(...) abort "{{{1
 
             " Now that we have the stack as a string, we need to:
             "
-            "       1. convert it into a list
-            "       2. store it into a dictionary
-            "       3. add the associated error message to the dictionary
-            "       4. add the dictionary to a list of all errors found so far
+            "    1. convert it into a list
+            "    2. store it into a dictionary
+            "    3. add the associated error message to the dictionary
+            "    4. add the dictionary to a list of all errors found so far
 
             " TV for the `stack` key: {{{
             "         ['FuncA[12]', 'FuncB[34]', 'FuncC[56]']
@@ -326,7 +326,6 @@ fu! stacktrace#main(lvl) abort "{{{1
     "         FuncC → s:FuncD
     "}}}
     let l:errors = s:get_raw_trace(a:lvl)
-
     if empty(l:errors)
         echo '[stacktrace] no stack trace in :messages'
         return
