@@ -163,9 +163,9 @@ fu! s:build_qfl(errors) abort "{{{1
             "
             "     printf('%s. %s', i, call),
             "             │   │
-            "             │   └─ function call; ex: 'FuncA[12]'
-            "             └─ index of the function call in the stack
-            "                the lower, the deeper
+            "             │   └ function call; ex: 'FuncA[12]'
+            "             └ index of the function call in the stack
+            "               the lower, the deeper
             "
             " The final text could be sth like:
             "
@@ -196,8 +196,8 @@ fu! s:get_raw_trace(...) abort "{{{1
     " `:messages`                                      │
     let msgs = reverse(split(execute('messages'), '\n\+'))
     "          │
-    "          └─ reverse the order because we're interested in the most
-    "             recent error
+    "          └ reverse the order because we're interested in the most
+    "            recent error
 
     " if we've just started Vim, there can't be any error, so don't do anything
     if len(msgs) < 3
@@ -232,11 +232,11 @@ fu! s:get_raw_trace(...) abort "{{{1
             " combine `lnum` and `partial_stack` to build a string describing
             " the complete stack
             let stack = printf('%s[%d]', partial_stack, lnum)
-            "                     └──┤
-            "                        └ add the address of the line where the
-            "                          innermost error occurred (ex: 56),
-            "                          inside square brackets (to follow the
-            "                          notation used by Vim for the outer functions)
+            "                     ├──┘
+            "                     └ add the address of the line where the
+            "                       innermost error occurred (ex: 56),
+            "                       inside square brackets (to follow the
+            "                       notation used by Vim for the outer functions)
             "
             " TV for `stack`:    function FuncA[12]..FuncB[34]..FuncC[56]
 
@@ -270,13 +270,13 @@ fu! s:get_raw_trace(...) abort "{{{1
         " in the next iteration of the loop, process next message
         let i += 1
 
-        "  ┌─ there has been at least an error
+        "  ┌ there has been at least an error
         "  │
         if e && i - e > max_dist
-        "       └───────┤
-        "               └ there're more than `max_dist` lines between the next
-        "                 message in the log, and the last one which contained
-        "                 “Error detected while processing function“
+        "       ├───────┘
+        "       └ there're more than `max_dist` lines between the next
+        "         message in the log, and the last one which contained
+        "         “Error detected while processing function“
 
             " get out of the loop because the distance is too high
             break
