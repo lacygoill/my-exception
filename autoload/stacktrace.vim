@@ -140,12 +140,12 @@ fu! s:build_qfl(errors) abort "{{{1
                 if name =~# '^<SNR>'
                     " add the 3 possible script-local prefix that the author of
                     " the plugin could have used:    `s:`, `<sid>`, `<SID>`
-                    let pat .= '%(\<%(sid|SID)\>|s:)'
+                    let pat ..= '%(\<%(sid|SID)\>|s:)'
                     " get the name of the function without `<SNR>3_`
                     let name = matchstr(name, '\v\<SNR\>\d+_\zs.+')
                 endif
                 " add the name of the function
-                let pat .= name.'\('
+                let pat ..= name.'\('
                 " the function call was made on some line of the source file find which one
                 for line in readfile(src)
                     let lnum += 1
