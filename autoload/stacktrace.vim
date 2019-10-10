@@ -208,11 +208,11 @@ fu! s:get_raw_trace(...) abort "{{{1
     "    │
     "    │  ┌ index of the last message where an error occurred
     "    │  │
-    let [i, e, l:errors] = [0, 0, []]
-    "           │
-    "           └ list of errors built in the next loop;
-    "             each error will be a dictionary containing 2 keys,
-    "             whose values will be a stack and a message
+    let [i, e, errors] = [0, 0, []]
+    "          │
+    "          └ list of errors built in the next loop;
+    "            each error will be a dictionary containing 2 keys,
+    "            whose values will be a stack and a message
 
     " iterate over the messages in the log
     while i < len(msgs)
@@ -258,10 +258,10 @@ fu! s:get_raw_trace(...) abort "{{{1
             "         msgs[i-1] = line  42:
             "         msgs[i]   = Error detected while processing …:
             ""}}}
-            call add(l:errors, {
-                             \   'stack': reverse(split(stack, '\.\.')),
-                             \   'msg':   msgs[i-2],
-                             \ })
+            call add(errors, {
+                           \   'stack': reverse(split(stack, '\.\.')),
+                           \   'msg':   msgs[i-2],
+                           \ })
 
             " remember the index of the message in the log where an error occurred
             let e = i
@@ -307,7 +307,7 @@ fu! s:get_raw_trace(...) abort "{{{1
         endif
     endwhile
 
-    return l:errors
+    return errors
 endfu
 
 fu! stacktrace#main(lvl) abort "{{{1
@@ -325,13 +325,13 @@ fu! stacktrace#main(lvl) abort "{{{1
     "         FuncA → FuncB
     "         FuncC → s:FuncD
     "}}}
-    let l:errors = s:get_raw_trace(a:lvl)
-    if empty(l:errors)
+    let errors = s:get_raw_trace(a:lvl)
+    if empty(errors)
         echo '[stacktrace] no stack trace in :messages'
         return
     endif
 
-    let qfl = s:build_qfl(l:errors)
+    let qfl = s:build_qfl(errors)
     if empty(qfl)
         echohl ErrorMsg
         echo '[stacktrace] unable to parse the stack trace'
