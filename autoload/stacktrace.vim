@@ -25,26 +25,26 @@
 
 "        nno cd :call FuncA()<cr>
 "
-"        fu! FuncA()
+"        fu FuncA()
 "            call FuncB()
 "            call FuncC()
 "        endfu
 "
-"        fu! FuncB()
+"        fu FuncB()
 "            abcd
 "        endfu
 "
-"        fu! FuncC()
+"        fu FuncC()
 "            call s:FuncD()
 "        endfu
 "
-"        fu! s:FuncD()
+"        fu s:FuncD()
 "            efgh
 "        endfu
 
 " Then, press `cd`, and execute `:WTF`.
 
-fu! s:build_qfl(errors) abort "{{{1
+fu s:build_qfl(errors) abort "{{{1
     let qfl = []
 
     " iterate over the errors (there could be only one)
@@ -185,7 +185,7 @@ fu! s:build_qfl(errors) abort "{{{1
     return qfl
 endfu
 
-fu! s:get_raw_trace(...) abort "{{{1
+fu s:get_raw_trace(...) abort "{{{1
     let max_dist = get(a:000, 0, 3)
 
     " get the log messages
@@ -310,7 +310,7 @@ fu! s:get_raw_trace(...) abort "{{{1
     return errors
 endfu
 
-fu! stacktrace#main(lvl) abort "{{{1
+fu stacktrace#main(lvl) abort "{{{1
     " TV for `errors`:{{{
     "         [
     "         \ {'stack': ['FuncB[34]', 'FuncA[12]'],
@@ -342,7 +342,7 @@ fu! stacktrace#main(lvl) abort "{{{1
     call s:populate_qfl(qfl)
 endfu
 
-fu! s:populate_qfl(qfl) abort "{{{1
+fu s:populate_qfl(qfl) abort "{{{1
     call setqflist(a:qfl)
     call setqflist([], 'a', { 'title': 'WTF' })
     do <nomodeline> QuickFixCmdPost copen
