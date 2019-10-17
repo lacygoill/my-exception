@@ -200,9 +200,7 @@ fu s:get_raw_trace(...) abort "{{{1
     "            recent error
 
     " if we've just started Vim, there can't be any error, so don't do anything
-    if len(msgs) < 3
-        return
-    endif
+    if len(msgs) < 3 | return | endif
 
     "    ┌ index of the message processed in the next loop
     "    │
@@ -219,8 +217,9 @@ fu s:get_raw_trace(...) abort "{{{1
 
         " if a message begins with “Error detected while processing “
         " and the previous one with “line {some_number}“
-        if i > 1 && msgs[i]   =~# '^Error detected while processing '
-        \        && msgs[i-1] =~? '\v^line\s+\d+'
+        if i > 1
+        \ && msgs[i] =~# '^Error detected while processing '
+        \ && msgs[i-1] =~? '^line\s\+\d\+'
 
             " … then get the line address in the innermost function where the
             " error occurred
@@ -273,7 +272,7 @@ fu s:get_raw_trace(...) abort "{{{1
         "  ┌ there has been at least an error
         "  │
         if e && i - e > max_dist
-        "       ├───────┘
+        "       ├──────────────┘
         "       └ there're more than `max_dist` lines between the next
         "         message in the log, and the last one which contained
         "         “Error detected while processing function“
@@ -282,27 +281,29 @@ fu s:get_raw_trace(...) abort "{{{1
             break
 
             " If we're only interested in the last error, then why 3? : {{{
-            "         i - e > 3
+            "
+            "     i - e > 3
             "
             " Why not 1? :
-            "         i - e > 1
+            "
+            "     i - e > 1
             "
             " Because an error takes 3 lines in the log. Example:
             "
-            "         Error detected while processing function foo
-            "         line    12:
-            "         E492: Not an editor command:     bar
+            "     Error detected while processing function foo
+            "     line    12:
+            "     E492: Not an editor command:     bar
             "
             " Note that if we have several consecutive errors, the loop
             " should still process them all, because there will only be
             " 2 lines between 2 of them. Example:
             "
-            "         Error detected while processing function foo   <+
-            "         line    12:                                     │ max_dist
-            "         E492: Not an editor command:     bar            │
-            "         Error detected while processing function baz   <+
-            "         line    34:
-            "         E492: Not an editor command:     qux
+            "     Error detected while processing function foo   <+
+            "     line    12:                                     │ max_dist
+            "     E492: Not an editor command:     bar            │
+            "     Error detected while processing function baz   <+
+            "     line    34:
+            "     E492: Not an editor command:     qux
             ""}}}
         endif
     endwhile
