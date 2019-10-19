@@ -106,54 +106,14 @@ fu s:build_qfl(errors) abort "{{{1
                 continue
             endif
 
-            if !has('nvim')
-                " expand the full path of the source file from which the function call was made
-                let src = fnamemodify(matchstr(def[1], '\vLast set from \zs.+\ze line \d+'), ':p')
-                " if it's not readable, we won't be able to visit it from the qfl,
-                " so, again, process next function call in the stack
-                if !filereadable(src)
-                    continue
-                endif
-                let lnum += matchstr(def[1], '\vLast set from .+ line \zs\d+')
-            else
-                " TODO: Remove this `else` clause and the `if !has('nvim')` once Nvim has merged 8.1.0362.{{{
-                "
-                " https://github.com/vim/vim/releases/tag/v8.1.0362
-                "}}}
-                let src = fnamemodify(matchstr(def[1], '\vLast set from \zs.+'), ':p')
-                if !filereadable(src)
-                    continue
-                endif
-
-                " build a pattern to match a line beginning with:
-                "     function! FuncA
-                " ... or
-                "     function! s:FuncA
-                " ... or
-                "     function! <sid>FuncA
-
-                " 1st part of the pattern (before the name of the function)
-                let pat = '\v\C^\s*fu%[nction]!?\s+'
-                " if the function is script-local, we can't add the raw function
-                " name (with `<SNR>`), because that's  not how it was written in
-                " the source file
-                if name =~# '^<SNR>'
-                    " add the 3 possible script-local prefix that the author of
-                    " the plugin could have used:    `s:`, `<sid>`, `<SID>`
-                    let pat ..= '%(\<%(sid|SID)\>|s:)'
-                    " get the name of the function without `<SNR>3_`
-                    let name = matchstr(name, '\v\<SNR\>\d+_\zs.+')
-                endif
-                " add the name of the function
-                let pat ..= name.'\('
-                " the function call was made on some line of the source file find which one
-                for line in readfile(src)
-                    let lnum += 1
-                    if line =~# pat
-                        break
-                    endif
-                endfor
+            " expand the full path of the source file from which the function call was made
+            let src = fnamemodify(matchstr(def[1], '\vLast set from \zs.+\ze line \d+'), ':p')
+            " if it's not readable, we won't be able to visit it from the qfl,
+            " so, again, process next function call in the stack
+            if !filereadable(src)
+                continue
             endif
+            let lnum += matchstr(def[1], '\vLast set from .+ line \zs\d+')
 
             " Finally, we can add an entry for the function call.{{{
             "
