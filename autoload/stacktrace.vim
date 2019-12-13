@@ -95,7 +95,7 @@ fu s:build_qfl(errors) abort "{{{1
                 "     \ ...,
                 "     \ '   endfunction']
                 "}}}
-                let def = split(execute('verb function '.name, 'silent!'), '\n')
+                let def = split(execute('verb function '..name, 'silent!'), '\n')
             endif
 
             " if the function definition doesn't have at least 2 lines, the
