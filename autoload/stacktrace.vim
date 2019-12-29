@@ -67,7 +67,7 @@ fu s:build_qfl(errors) abort "{{{1
         "}}}
         for call in err.stack
             " TV: 'FuncB'
-            let name = matchstr(call, '\v.{-}\ze\[\d+\]$')
+            let name = matchstr(call, '.\{-}\ze\[\d\+\]$')
 
             " if we don't have a function name, process next function call in the stack
             if empty(name)
@@ -75,7 +75,7 @@ fu s:build_qfl(errors) abort "{{{1
             endif
 
             " TV: '34'
-            let lnum = str2nr(matchstr(call, '\v\[\zs\d+\ze\]$'))
+            let lnum = str2nr(matchstr(call, '\[\zs\d\+\ze\]$'))
 
             " if the name of a function contains a slash, or a dot, it's
             " not a function, it's a file
@@ -107,13 +107,13 @@ fu s:build_qfl(errors) abort "{{{1
             endif
 
             " expand the full path of the source file from which the function call was made
-            let src = fnamemodify(matchstr(def[1], '\vLast set from \zs.+\ze line \d+'), ':p')
+            let src = fnamemodify(matchstr(def[1], 'Last set from \zs.\+\ze line \d\+'), ':p')
             " if it's not readable, we won't be able to visit it from the qfl,
             " so, again, process next function call in the stack
             if !filereadable(src)
                 continue
             endif
-            let lnum += matchstr(def[1], '\vLast set from .+ line \zs\d+')
+            let lnum += matchstr(def[1], 'Last set from .\+ line \zs\d\+')
 
             " Finally, we can add an entry for the function call.{{{
             "
@@ -186,7 +186,7 @@ fu s:get_raw_trace(...) abort "{{{1
             let lnum = matchstr(msgs[i-1], '\d\+')
 
             " … and the stack of function calls leading to the error
-            let partial_stack = matchstr(msgs[i], '\vError detected while processing %(function )?\zs.*\ze:$')
+            let partial_stack = matchstr(msgs[i], 'Error detected while processing \%(function \)\=\zs.*\ze:$')
 
             " combine `lnum` and `partial_stack` to build a string describing
             " the complete stack
