@@ -304,8 +304,7 @@ fu stacktrace#main(lvl) abort "{{{1
 endfu
 
 fu s:populate_qfl(qfl) abort "{{{1
-    call setqflist(a:qfl)
-    call setqflist([], 'a', { 'title': 'WTF' })
+    call setqflist([], ' ', {'items': a:qfl, 'title': 'WTF'})
     do <nomodeline> QuickFixCmdPost copen
     call qf#set_matches('stacktrace:populate_qfl', 'Conceal', 'double_bar')
     call qf#create_matches()
