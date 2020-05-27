@@ -1,10 +1,3 @@
-" Source:
-" https://github.com/tweekmonster/exception.vim/blob/ca36f1ecf5b4cea1206355e8e5e858512018a5db/autoload/exception.vim
-
-" Acronym used in the comments:
-"     TV = Typical Value
-"          example used to illustrate which kind of value a variable could store
-
 " Definition of a stack trace: {{{1
 "
 " Programmers  commonly use  stack  tracing during  interactive and  post-mortem
@@ -22,170 +15,98 @@
 "
 " To test  the `stacktrace#qfl()` function,  install the following  `cd` mapping
 " and the `FuncA()`, `FuncB()`, `FuncC()`, `FuncD()` functions:
-
-"        nno cd :call FuncA()<cr>
 "
-"        fu FuncA()
-"            call FuncB()
-"            call FuncC()
-"        endfu
+"     nno cd :call FuncA()<cr>
 "
-"        fu FuncB()
-"            abcd
-"        endfu
+"     fu FuncA()
+"         call FuncB()
+"         call FuncC()
+"     endfu
 "
-"        fu FuncC()
-"            call s:FuncD()
-"        endfu
+"     fu FuncB()
+"         abcd
+"     endfu
 "
-"        fu s:FuncD()
-"            efgh
-"        endfu
-
+"     fu FuncC()
+"         call s:FuncD()
+"     endfu
+"
+"     fu s:FuncD()
+"         efgh
+"     endfu
+"
 " Then, press `cd`, and execute `:WTF`.
 
-fu s:build_qfl(errors) abort "{{{1
-    let qfl = []
+" Interface {{{1
+fu stacktrace#main(lvl) abort "{{{2
+    " example value for `errors`:{{{
+    "
+    "     [
+    "     \ {'stack': ['FuncB[34]', 'FuncA[12]'],
+    "     \  'msg' : 'E492: Not an editor command:     abcd'},
+    "     \
+    "     \ {'stack': ['<SNR>3_FuncD[78]', 'FuncC[56]'],
+    "     \  'msg' : 'E492: Not an editor command:     efgh'},
+    "     ]
+    "
+    " In this fictitious example, 2 errors occurred in FuncB() and s:FuncD(),
+    " and the chains of calls were:
+    "
+    "     FuncA → FuncB
+    "     FuncC → s:FuncD
+    "}}}
+    let errors = s:get_raw_trace(a:lvl)
+    if empty(errors)
+        echo '[stacktrace] no stack trace in :messages'
+        return
+    endif
 
-    " iterate over the errors (there could be only one)
-    for err in a:errors
-        " we use `i` to index the position of a function call in the stack trace
-        let i = 0
+    let qfl = s:build_qfl(errors)
+    if empty(qfl)
+        echohl ErrorMsg
+        echo '[stacktrace] unable to parse the stack trace'
+        echohl NONE
+        return
+    endif
 
-        " add the error message to the qfl
-        call add(qfl, {'text': err.msg, 'lnum': 0, 'bufnr': 0})
-
-        " Now, we need to add to the qfl, the function calls which lead to the error.{{{
-        "
-        " And for each of them, we need to find out where it was made:
-        "
-        "    - which file
-        "    - which line of the file (!= line of the function)
-        "
-        " TV for `err.stack`:    ['FuncB[34]', 'FuncA[12]']
-        " TV for `call`:          'FuncB[34]'
-        "}}}
-        for call in err.stack
-            " TV: 'FuncB'
-            let name = matchstr(call, '.\{-}\ze\[\d\+\]$')
-
-            " if we don't have a function name, process next function call in the stack
-            if empty(name)
-                continue
-            endif
-
-            " TV: '34'
-            let lnum = str2nr(matchstr(call, '\[\zs\d\+\ze\]$'))
-
-            " if the name of a function contains a slash, or a dot, it's
-            " not a function, it's a file
-            "
-            " it happens when the error occurred in a sourced file, like
-            " a ftplugin; put a garbage command in one of them to reproduce
-            if name =~# '[/.]'
-                call add(qfl, {'text': '', 'filename': name, 'lnum': lnum})
-                " there's no chain of calls, the only error comes from this file
-                continue
-            else
-                " TV:{{{
-                "      ['   function FuncB()',
-                "     \ '    Last set from ~/.vim/vimrc',
-                "     \ ...,
-                "     \ '34    abcd',
-                "     \ ...,
-                "     \ '   endfunction']
-                "}}}
-                let def = split(execute('verb function '..name, 'silent!'), '\n')
-            endif
-
-            " if the function definition doesn't have at least 2 lines, the
-            " information we need isn't there, so don't bother creating an
-            " entry in the qfl for it; instead process next function call
-            " in the stack
-            if len(def) < 2
-                continue
-            endif
-
-            " expand the full path of the source file from which the function call was made
-            let src = fnamemodify(matchstr(def[1], 'Last set from \zs.\+\ze line \d\+'), ':p')
-            " if it's not readable, we won't be able to visit it from the qfl,
-            " so, again, process next function call in the stack
-            if !filereadable(src)
-                continue
-            endif
-            let lnum += matchstr(def[1], 'Last set from .\+ line \zs\d\+')
-
-            " Finally, we can add an entry for the function call.{{{
-            "
-            " We have its filename with `src`.
-            " We have its line address with `lnum`.
-            " And we can generate a simple text with:
-            "
-            "     printf('%s. %s', i, call),
-            "             │   │
-            "             │   └ function call; ex: 'FuncA[12]'
-            "             └ index of the function call in the stack
-            "               the lower, the deeper
-            "
-            " The final text could be sth like:
-            "
-            "     '0. Func[12]'
-            "}}}
-            call add(qfl, {
-                        \   'text':     printf('%s. %s', i, call),
-                        \   'filename': src,
-                        \   'lnum':     lnum,
-                        \ })
-
-            " increment `i` to update the index of the next function call in the stack
-            let i += 1
-        endfor
-    endfor
-
-    return qfl
+    call s:populate_qfl(qfl)
 endfu
-
-fu s:get_raw_trace(...) abort "{{{1
+"}}}1
+" Core {{{1
+fu s:get_raw_trace(...) abort "{{{2
     let max_dist = get(a:000, 0, 3)
 
-    " get the log messages
-    "
-    " for some reason, `execute()` sometimes produces  ┐
-    " 1 or several consecutive empty line(s)         │
-    " even though they aren't there in the output of │
-    " `:messages`                                      │
-    let msgs = reverse(split(execute('messages'), '\n\+'))
-    "          │
-    "          └ reverse the order because we're interested in the most
-    "            recent error
+    " for some reason,  `execute()` sometimes produces 1  or several consecutive
+    " empty line(s) even though they aren't there in the output of `:messages`
+    let msgs = split(execute('messages'), '\n\+')
 
-    " if we've just started Vim, there can't be any error, so don't do anything
+    " a parseable error needs at least 3 lines
     if len(msgs) < 3 | return | endif
 
-    "    ┌ index of the message processed in the next loop
-    "    │
-    "    │  ┌ index of the last message where an error occurred
+    let [i, e, errors] = [0, -1, []]
+    "    │  │  │{{{
+    "    │  │  └ list of errors built in the next loop;
+    "    │  │    each error will be a dictionary containing 2 keys,
+    "    │  │    whose values will be a stack and a message
     "    │  │
-    let [i, e, errors] = [0, 0, []]
-    "          │
-    "          └ list of errors built in the next loop;
-    "            each error will be a dictionary containing 2 keys,
-    "            whose values will be a stack and a message
+    "    │  └ index of the last message where an error occurred
+    "    │
+    "    └ index of the message processed in the next loop
+    "}}}
 
     " iterate over the messages in the log
-    while i < len(msgs)
+    while i < len(msgs) - 2
 
         " if a message begins with “Error detected while processing “
-        " and the previous one with “line {some_number}“
-        if i > 1
-        \ && msgs[i] =~# '^Error detected while processing '
-        \ && msgs[i-1] =~? '^line\s\+\d\+'
+        " and the next one with “line {some_number}“
+        if msgs[i] =~# '^Error detected while processing '
+        \ && msgs[i+1] =~? '^line\s\+\d\+'
 
-            " … then get the line address in the innermost function where the
+            " ... then get the line address  in the innermost function where the
             " error occurred
-            let lnum = matchstr(msgs[i-1], '\d\+')
+            let lnum = matchstr(msgs[i+1], '\d\+')
 
-            " … and the stack of function calls leading to the error
+            " ... and the stack of function calls leading to the error
             let partial_stack = matchstr(msgs[i], 'Error detected while processing \%(function \)\=\zs.*\ze:$')
 
             " combine `lnum` and `partial_stack` to build a string describing
@@ -197,7 +118,9 @@ fu s:get_raw_trace(...) abort "{{{1
             "                       inside square brackets (to follow the
             "                       notation used by Vim for the outer functions)
             "
-            " TV for `stack`:    function FuncA[12]..FuncB[34]..FuncC[56]
+            " example value for `stack`:
+            "
+            "     function FuncA[12]..FuncB[34]..FuncC[56]
 
             " Now that we have the stack as a string, we need to:
             "
@@ -206,20 +129,23 @@ fu s:get_raw_trace(...) abort "{{{1
             "    3. add the associated error message to the dictionary
             "    4. add the dictionary to a list of all errors found so far
 
-            " TV for the `stack` key: {{{
-            "         ['FuncA[12]', 'FuncB[34]', 'FuncC[56]']
+            " example value for the `stack` key: {{{
             "
-            " TV for the `msg` key:
-            "         E492: Not an editor command:     abcd
+            "     ['FuncA[12]', 'FuncB[34]', 'FuncC[56]']
             "
-            " Since, the messages in the log have been reversed:
-            "         msgs[i-2] = E123: …
-            "         msgs[i-1] = line  42:
-            "         msgs[i]   = Error detected while processing …:
+            " example value for the `msg` key:
+            "
+            "     E492: Not an editor command:     abcd
+            "
+            " example values for the messages:
+            "
+            "     msgs[i]   = 'Error detected while processing ...:'
+            "     msgs[i+1] = 'line  42:'
+            "     msgs[i+2] = 'E123: ...'
             ""}}}
             call add(errors, {
                            \   'stack': reverse(split(stack, '\.\.')),
-                           \   'msg':   msgs[i-2],
+                           \   'msg':   msgs[i+2],
                            \ })
 
             " remember the index of the message in the log where an error occurred
@@ -271,39 +197,112 @@ fu s:get_raw_trace(...) abort "{{{1
     return errors
 endfu
 
-fu stacktrace#main(lvl) abort "{{{1
-    " TV for `errors`:{{{
-    "         [
-    "         \ {'stack': ['FuncB[34]', 'FuncA[12]'],
-    "         \  'msg' : 'E492: Not an editor command:     abcd'},
-    "         \
-    "         \ {'stack': ['<SNR>3_FuncD[78]', 'FuncC[56]'],
-    "         \  'msg' : 'E492: Not an editor command:     efgh'},
-    "         ]
-    "
-    " In this fictitious example, 2 errors occurred in FuncB() and s:FuncD(),
-    " and the chains of calls were:
-    "         FuncA → FuncB
-    "         FuncC → s:FuncD
-    "}}}
-    let errors = s:get_raw_trace(a:lvl)
-    if empty(errors)
-        echo '[stacktrace] no stack trace in :messages'
-        return
-    endif
+fu s:build_qfl(errors) abort "{{{2
+    let qfl = []
 
-    let qfl = s:build_qfl(errors)
-    if empty(qfl)
-        echohl ErrorMsg
-        echo '[stacktrace] unable to parse the stack trace'
-        echohl NONE
-        return
-    endif
+    " iterate over the errors (there could be only one)
+    for err in a:errors
+        " we use `i` to index the position of a function call in the stack trace
+        let i = 0
 
-    call s:populate_qfl(qfl)
+        " add the error message to the qfl
+        call add(qfl, {'text': err.msg, 'lnum': 0, 'bufnr': 0})
+
+        " Now, we need to add to the qfl, the function calls which lead to the error.{{{
+        "
+        " And for each of them, we need to find out where it was made:
+        "
+        "    - which file
+        "    - which line of the file (!= line of the function)
+        "
+        " example value for `err.stack`:
+        "
+        "     ['FuncB[34]', 'FuncA[12]']
+        "
+        " example value for `call`:
+        "
+        "     'FuncB[34]'
+        "}}}
+        for call in err.stack
+            " example value: `FuncB`
+            let name = matchstr(call, '.\{-}\ze\[\d\+\]$')
+
+            " if we don't have a function name, process next function call in the stack
+            if empty(name)
+                continue
+            endif
+
+            " example value: `34`
+            let lnum = str2nr(matchstr(call, '\[\zs\d\+\ze\]$'))
+
+            " if the name of a function contains a slash, or a dot, it's
+            " not a function, it's a file
+            "
+            " it happens when the error occurred in a sourced file, like
+            " a ftplugin; put a garbage command in one of them to reproduce
+            if name =~# '[/.]'
+                call add(qfl, {'text': '', 'filename': name, 'lnum': lnum})
+                " there's no chain of calls, the only error comes from this file
+                continue
+            else
+                " example value:{{{
+                "      ['   function FuncB()',
+                "     \ '    Last set from ~/.vim/vimrc',
+                "     \ ...,
+                "     \ '34    abcd',
+                "     \ ...,
+                "     \ '   endfunction']
+                "}}}
+                let def = split(execute('verb function '..name, 'silent!'), '\n')
+            endif
+
+            " if  the function  definition doesn't  have at  least 2  lines, the
+            " information we need isn't there, so don't bother creating an entry
+            " in the qfl for it; instead process next function call in the stack
+            if len(def) < 2
+                continue
+            endif
+
+            " expand the full path of the source file from which the function call was made
+            let src = fnamemodify(matchstr(def[1], 'Last set from \zs.\+\ze line \d\+'), ':p')
+            " if it's not readable,  we won't be able to visit  it from the qfl,
+            " so, again, process next function call in the stack
+            if !filereadable(src)
+                continue
+            endif
+            let lnum += matchstr(def[1], 'Last set from .\+ line \zs\d\+')
+
+            " Finally, we can add an entry for the function call.{{{
+            "
+            " We have its filename with `src`.
+            " We have its line address with `lnum`.
+            " And we can generate a simple text with:
+            "
+            "     printf('%s. %s', i, call),
+            "             │   │
+            "             │   └ function call; ex: 'FuncA[12]'
+            "             └ index of the function call in the stack
+            "               the lower, the deeper
+            "
+            " The final text could be sth like:
+            "
+            "     '0. Func[12]'
+            "}}}
+            call add(qfl, {
+                        \   'text':     printf('%s. %s', i, call),
+                        \   'filename': src,
+                        \   'lnum':     lnum,
+                        \ })
+
+            " increment `i` to update the index of the next function call in the stack
+            let i += 1
+        endfor
+    endfor
+
+    return qfl
 endfu
 
-fu s:populate_qfl(qfl) abort "{{{1
+fu s:populate_qfl(qfl) abort "{{{2
     call setqflist([], ' ', {'items': a:qfl, 'title': 'WTF'})
     do <nomodeline> QuickFixCmdPost copen
     call qf#set_matches('stacktrace:populate_qfl', 'Conceal', 'double_bar')
