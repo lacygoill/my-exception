@@ -155,17 +155,16 @@ fu s:get_raw_trace(...) abort "{{{2
         " in the next iteration of the loop, process next message
         let i += 1
 
-        "  ┌ there has been at least an error
+        if e != -1 && i - e > max_dist
+        "  ├─────┘    ├──────────────┘{{{
+        "  │          └ there're more than `max_dist` lines between the next
+        "  │            message in the log, and the last one which contained
+        "  │            “Error detected while processing function“
         "  │
-        if e && i - e > max_dist
-        "       ├──────────────┘
-        "       └ there're more than `max_dist` lines between the next
-        "         message in the log, and the last one which contained
-        "         “Error detected while processing function“
-
+        "  └ there has been at least an error
+        "}}}
             " get out of the loop because the distance is too high
             break
-
             " If we're only interested in the last error, then why 3? : {{{
             "
             "     i - e > 3
