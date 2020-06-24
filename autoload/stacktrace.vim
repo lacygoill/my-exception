@@ -78,12 +78,12 @@ fu s:get_raw_trace(...) abort "{{{2
 
     " for some reason,  `execute()` sometimes produces 1  or several consecutive
     " empty line(s) even though they aren't there in the output of `:messages`
-    let msgs = split(execute('messages'), '\n\+')
+    let msgs = execute('messages')->split('\n\+')
 
     " a parseable error needs at least 3 lines
     if len(msgs) < 3 | return | endif
 
-    let [i, e, errors] = [0, -1, []]
+    let [i, e, errors] = [len(msgs) - 1, -1, []]
     "    │  │  │{{{
     "    │  │  └ list of errors built in the next loop;
     "    │  │    each error will be a dictionary containing 2 keys,
@@ -91,16 +91,17 @@ fu s:get_raw_trace(...) abort "{{{2
     "    │  │
     "    │  └ index of the last message where an error occurred
     "    │
-    "    └ index of the message processed in the next loop
+    "    └ index of the message processed in the next loop;
+    "      we start from the last one because we're interested in the most recent error(s)
     "}}}
 
     " iterate over the messages in the log
-    while i < len(msgs) - 2
+    while i >= 0
 
         " if a message begins with “Error detected while processing “
         " and the next one with “line {some_number}“
         if msgs[i] =~# '^Error detected while processing '
-        \ && msgs[i+1] =~? '^line\s\+\d\+'
+            \ && msgs[i+1] =~? '^line\s\+\d\+'
 
             " ... then get the line address  in the innermost function where the
             " error occurred
@@ -144,18 +145,18 @@ fu s:get_raw_trace(...) abort "{{{2
             "     msgs[i+2] = 'E123: ...'
             ""}}}
             call add(errors, {
-                           \   'stack': reverse(split(stack, '\.\.')),
-                           \   'msg':   msgs[i+2],
-                           \ })
+                \ 'stack': reverse(split(stack, '\.\.')),
+                \ 'msg': msgs[i+2],
+                \ })
 
             " remember the index of the message in the log where an error occurred
             let e = i
         endif
 
-        " in the next iteration of the loop, process next message
-        let i += 1
+        " in the next iteration of the loop, process previous message
+        let i -= 1
 
-        if e != -1 && i - e > max_dist
+        if e != -1 && e - i > max_dist
         "  ├─────┘    ├──────────────┘{{{
         "  │          └ there're more than `max_dist` lines between the next
         "  │            message in the log, and the last one which contained
