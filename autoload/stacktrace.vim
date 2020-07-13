@@ -194,7 +194,8 @@ fu s:get_raw_trace(...) abort "{{{2
         endif
     endwhile
 
-    return errors
+    " reverse the errros, because I like reading them in their chronological order
+    return reverse(errors)
 endfu
 
 fu s:build_qfl(errors) abort "{{{2
