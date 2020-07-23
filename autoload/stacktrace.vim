@@ -73,9 +73,7 @@ fu stacktrace#main(lvl) abort "{{{2
 endfu
 "}}}1
 " Core {{{1
-fu s:get_raw_trace(...) abort "{{{2
-    let max_dist = get(a:000, 0, 3)
-
+fu s:get_raw_trace(max_dist = 3) abort "{{{2
     " for some reason,  `execute()` sometimes produces 1  or several consecutive
     " empty line(s) even though they aren't there in the output of `:messages`
     let msgs = execute('messages')->split('\n\+')
@@ -156,9 +154,9 @@ fu s:get_raw_trace(...) abort "{{{2
         " in the next iteration of the loop, process previous message
         let i -= 1
 
-        if e != -1 && e - i > max_dist
-        "  ├─────┘    ├──────────────┘{{{
-        "  │          └ there're more than `max_dist` lines between the next
+        if e != -1 && e - i > a:max_dist
+        "  ├─────┘    ├────────────────┘{{{
+        "  │          └ there're more than `a:max_dist` lines between the next
         "  │            message in the log, and the last one which contained
         "  │            “Error detected while processing function“
         "  │
@@ -185,7 +183,7 @@ fu s:get_raw_trace(...) abort "{{{2
             " 2 lines between 2 of them. Example:
             "
             "     Error detected while processing function foo   <+
-            "     line    12:                                     │ max_dist
+            "     line    12:                                     │ a:max_dist
             "     E492: Not an editor command:     bar            │
             "     Error detected while processing function baz   <+
             "     line    34:
