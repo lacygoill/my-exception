@@ -167,12 +167,27 @@ fu s:get_raw_trace(max_dist = 3) abort "{{{2
             "                                                                                 ^-------^
             "
             " When an error  is raised from a function which  was not called via
-            " the command-line  or a sourced script  (mapping, command, autocmd,
+            " the command-line nor a  sourced script (mapping, command, autocmd,
             " ...), we don't need to remove anything:
             "
             "     Error detected while processing function FuncA[2]..FuncC[1]..<SNR>151_FuncD:~
             "                                     ^-------^
             "                                     no need to remove this; we didn't extract it
+            "
+            " ---
+            "
+            " For a similar reason, we may need to remove the word `script`:
+            "
+            "     Error detected while processing FileType Autocommands for "*"
+            "     ..Syntax Autocommands for "*"
+            "     ..function <SNR>20_SynSet[25]
+            "     ..script /home/user/.vim/plugged/vim-vim/after/syntax/vim.vim:
+            "       ^-----^
+            "       noise
+            "
+            " Note that  in this example,  the message is artificially  split on
+            " multiple  lines,  to improve  the  readability.   In a  real  case
+            " scenarion, everything is given in a single message line.
             "}}}
             " Example of value for the `stack` key: {{{
             "
@@ -190,7 +205,7 @@ fu s:get_raw_trace(max_dist = 3) abort "{{{2
             ""}}}
             call add(errors, {
                 \ 'stack': split(stack, '\.\.')
-                \     ->map({_, v -> substitute(v, '^\Cfunction ', '', '')})
+                \     ->map({_, v -> substitute(v, '^\C\%(function\|script\) ', '', '')})
                 \     ->reverse(),
                 \ 'msg': msgs[i + 2],
                 \ })
@@ -355,6 +370,6 @@ fu s:populate_qfl(qfl) abort "{{{2
     if &ft isnot# 'qf'
         do <nomodeline> QuickFixCmdPost copen
     endif
-    call qf#set_matches('stacktrace:populate_qfl', 'Conceal', 'double_bar')
-    call qf#create_matches()
+    sil! call qf#set_matches('stacktrace:populate_qfl', 'Conceal', 'double_bar')
+    sil! call qf#create_matches()
 endfu
