@@ -5,7 +5,7 @@
 " message, which the user can then report to a programmer.
 "
 " A stack trace allows tracking the sequence  of nested functions called - up to
-" the point where  the stack trace is generated. In  a post-mortem scenario this
+" the point where the stack trace  is generated.  In a post-mortem scenario this
 " extends up to the function where the failure occurred (but was not necessarily
 " caused).
 "
@@ -43,10 +43,10 @@ fu stacktrace#main(lvl) abort "{{{2
     "
     "     [
     "     \ {'stack': ['FuncB[34]', 'FuncA[12]'],
-    "     \  'msg' : 'E492: Not an editor command:     abcd'},
+    "     \  'msg': 'E492: Not an editor command:     abcd'},
     "     \
     "     \ {'stack': ['<SNR>3_FuncD[78]', 'FuncC[56]'],
-    "     \  'msg' : 'E492: Not an editor command:     efgh'},
+    "     \  'msg': 'E492: Not an editor command:     efgh'},
     "     ]
     "
     " In this fictitious example, 2 errors occurred in FuncB() and s:FuncD(),
@@ -96,55 +96,103 @@ fu s:get_raw_trace(max_dist = 3) abort "{{{2
     " iterate over the messages in the log
     while i >= 0
 
-        " if a message begins with “Error detected while processing “
-        " and the next one with “line {some_number}“
-        if msgs[i] =~# '^Error detected while processing '
-            \ && msgs[i+1] =~? '^line\s\+\d\+'
+        " We ignore error messages raised from pseudo-files under `/proc/`.{{{
+        "
+        " Because we can't  visit those files anyway, so populating  a qfl would
+        " be useless, and distracting when we  would find out that we can't read
+        " the code which raised the errors.
+        "
+        " That can happen when we turn a Vim script into a shell heredoc.
+        "}}}
+        if msgs[i] =~# '^Error detected while processing \%(command line\.\.script /proc/\d\+/fd/\d\+\)\@!'
+            \ && msgs[i + 1] =~? '^line\s\+\d\+'
 
             " ... then get the line address  in the innermost function where the
             " error occurred
-            let lnum = matchstr(msgs[i+1], '\d\+')
+            let lnum = matchstr(msgs[i + 1], '\d\+')
 
             " ... and the stack of function calls leading to the error
-            let partial_stack = matchstr(msgs[i], 'Error detected while processing \%(function \)\=\zs.*\ze:$')
+            let partial_stack = matchstr(msgs[i],
+                \ 'Error detected while processing \%(function \|command line\.\.\)\=\zs.*\ze:$')
 
-            " combine `lnum` and `partial_stack` to build a string describing
-            " the complete stack
+            " combine `lnum` and `partial_stack` to build a string describing the complete stack
+            " Example of value for the `stack` variable:{{{
+            "
+            "     FuncA[12]..FuncB[34]..FuncC[56]
+            "}}}
             let stack = printf('%s[%d]', partial_stack, lnum)
-            "                     ├──┘
+            "                     ├──┘{{{
             "                     └ add the address of the line where the
             "                       innermost error occurred (ex: 56),
             "                       inside square brackets (to follow the
             "                       notation used by Vim for the outer functions)
-            "
-            " example value for `stack`:
-            "
-            "     function FuncA[12]..FuncB[34]..FuncC[56]
+            "}}}
 
-            " Now that we have the stack as a string, we need to:
+            " Now that we have the stack as a string, we need to:{{{
             "
             "    1. convert it into a list
             "    2. store it into a dictionary
             "    3. add the associated error message to the dictionary
             "    4. add the dictionary to a list of all errors found so far
-
-            " example value for the `stack` key: {{{
+            "}}}
+            " Why `map(... substitute(...))`?{{{
+            "
+            " It may be necessary when the error is raised from a script sourced
+            " manually:
+            "
+            "     " write this in /tmp/t.vim
+            "     vim9script
+            "     def FuncA(n: number)
+            "         if n == 123
+            "             # some comment
+            "             FuncB('string')
+            "         endif
+            "     enddef
+            "     def FuncB(n: number)
+            "         echo n
+            "     enddef
+            "     FuncA(123)
+            "
+            "     $ vim /tmp/t.vim
+            "     :so%
+            "
+            "     Error detected while processing /tmp/d.vim[11]..function <SNR>185_FuncA:~
+            "                                                     ^-------^
+            "                                                     noise which must be removed
+            "
+            " Same  thing for  a  command executed  via  the shell  command-line
+            " (also, think about a script turned into a shell heredoc):
+            "
+            "     Error detected while processing command line..script /proc/32041/fd/11[11]..function <SNR>151_FuncA:~
+            "                                                                                 ^-------^
+            "
+            " When an error  is raised from a function which  was not called via
+            " the command-line  or a sourced script  (mapping, command, autocmd,
+            " ...), we don't need to remove anything:
+            "
+            "     Error detected while processing function FuncA[2]..FuncC[1]..<SNR>151_FuncD:~
+            "                                     ^-------^
+            "                                     no need to remove this; we didn't extract it
+            "}}}
+            " Example of value for the `stack` key: {{{
             "
             "     ['FuncA[12]', 'FuncB[34]', 'FuncC[56]']
             "
-            " example value for the `msg` key:
+            " Example of value for the `msg` key:
             "
             "     E492: Not an editor command:     abcd
             "
-            " example values for the messages:
+            " Example of values for the messages:
             "
-            "     msgs[i]   = 'Error detected while processing ...:'
-            "     msgs[i+1] = 'line  42:'
-            "     msgs[i+2] = 'E123: ...'
+            "     msgs[i] = 'Error detected while processing ...:'
+            "     msgs[i + 1] = 'line  42:'
+            "     msgs[i + 2] = 'E123: ...'
             ""}}}
             call add(errors, {
-                \ 'stack': reverse(split(stack, '\.\.')),
-                \ 'msg': msgs[i+2],
+                \ 'stack': split(stack, '\.\.')
+                \     ->map({_, v -> substitute(v, '^\Cfunction ', '', '')})
+                \     ->reverse(),
+                \ 'msg': msgs[i + 2],
                 \ })
 
             " remember the index of the message in the log where an error occurred
@@ -158,13 +206,13 @@ fu s:get_raw_trace(max_dist = 3) abort "{{{2
         "  ├─────┘    ├────────────────┘{{{
         "  │          └ there're more than `a:max_dist` lines between the next
         "  │            message in the log, and the last one which contained
-        "  │            “Error detected while processing function“
+        "  │            "Error detected while processing function"
         "  │
         "  └ there has been at least an error
         "}}}
             " get out of the loop because the distance is too high
             break
-            " If we're only interested in the last error, then why 3? : {{{
+            " If we're only interested in the last error, then why 3? {{{
             "
             "     i - e > 3
             "
@@ -172,7 +220,7 @@ fu s:get_raw_trace(max_dist = 3) abort "{{{2
             "
             "     i - e > 1
             "
-            " Because an error takes 3 lines in the log. Example:
+            " Because an error takes 3 lines in the log.  Example:
             "
             "     Error detected while processing function foo
             "     line    12:
@@ -180,7 +228,7 @@ fu s:get_raw_trace(max_dist = 3) abort "{{{2
             "
             " Note that if we have several consecutive errors, the loop
             " should still process them all, because there will only be
-            " 2 lines between 2 of them. Example:
+            " 2 lines between 2 of them.  Example:
             "
             "     Error detected while processing function foo   <+
             "     line    12:                                     │ a:max_dist
@@ -232,13 +280,13 @@ fu s:build_qfl(errors) abort "{{{2
             endif
 
             " example value: `34`
-            let lnum = str2nr(matchstr(call, '\[\zs\d\+\ze\]$'))
+            let lnum = matchstr(call, '\[\zs\d\+\ze\]$')->str2nr()
 
             " if the name of a function contains a slash, or a dot, it's
             " not a function, it's a file
             "
             " it happens when the error occurred in a sourced file, like
-            " a ftplugin; put a garbage command in one of them to reproduce
+            " a ftplugin (put an invalid command in one of them to reproduce)
             if name =~# '[/.]'
                 call add(qfl, {'text': '', 'filename': name, 'lnum': lnum})
                 " there's no chain of calls, the only error comes from this file
@@ -252,7 +300,7 @@ fu s:build_qfl(errors) abort "{{{2
                 "     \ ...,
                 "     \ '   endfunction']
                 "}}}
-                let def = split(execute('verb function '..name, 'silent!'), '\n')
+                let def = execute('verb function ' .. name, 'silent!')->split('\n')
             endif
 
             " if  the function  definition doesn't  have at  least 2  lines, the
@@ -263,7 +311,7 @@ fu s:build_qfl(errors) abort "{{{2
             endif
 
             " expand the full path of the source file from which the function call was made
-            let src = fnamemodify(matchstr(def[1], 'Last set from \zs.\+\ze line \d\+'), ':p')
+            let src = matchstr(def[1], 'Last set from \zs.\+\ze line \d\+')->fnamemodify(':p')
             " if it's not readable,  we won't be able to visit  it from the qfl,
             " so, again, process next function call in the stack
             if !filereadable(src)
@@ -288,10 +336,10 @@ fu s:build_qfl(errors) abort "{{{2
             "     '0. Func[12]'
             "}}}
             call add(qfl, {
-                        \   'text':     printf('%s. %s', i, call),
-                        \   'filename': src,
-                        \   'lnum':     lnum,
-                        \ })
+                \   'text': printf('%s. %s', i, call),
+                \   'filename': src,
+                \   'lnum': lnum,
+                \ })
 
             " increment `i` to update the index of the next function call in the stack
             let i += 1
@@ -303,7 +351,10 @@ endfu
 
 fu s:populate_qfl(qfl) abort "{{{2
     call setqflist([], ' ', {'items': a:qfl, 'title': 'WTF'})
-    do <nomodeline> QuickFixCmdPost copen
+    " no need to make Vim open the qf window if it's already open
+    if &ft isnot# 'qf'
+        do <nomodeline> QuickFixCmdPost copen
+    endif
     call qf#set_matches('stacktrace:populate_qfl', 'Conceal', 'double_bar')
     call qf#create_matches()
 endfu
