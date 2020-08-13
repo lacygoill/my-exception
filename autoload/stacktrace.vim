@@ -135,7 +135,17 @@ fu s:get_raw_trace(max_dist = 3) abort "{{{2
             "    3. add the associated error message to the dictionary
             "    4. add the dictionary to a list of all errors found so far
             "}}}
-            " Why `map(... substitute(...))`?{{{
+            " Why the first `map(... substitute(...))`?{{{
+            "
+            " Sometimes, we have this kind of error message:
+            "
+            "     Error detected while processing /tmp/t.vim[36]..function <80><fd>R239_Func:
+            "                                                              ^-------^
+            "                                                                  ✘
+            "
+            " It happens when we source the same script more than once.
+            "}}}
+            "   And why the second one?{{{
             "
             " It may be necessary when the error is raised from a script sourced
             " manually:
@@ -205,6 +215,7 @@ fu s:get_raw_trace(max_dist = 3) abort "{{{2
             ""}}}
             call add(errors, {
                 \ 'stack': split(stack, '\.\.')
+                \     ->map({_, v -> substitute(v, '^\Cfunction \zs<80><fd>R\ze\d\+_', '<SNR>', '')})
                 \     ->map({_, v -> substitute(v, '^\C\%(function\|script\) ', '', '')})
                 \     ->reverse(),
                 \ 'msg': msgs[i + 2],
