@@ -104,8 +104,15 @@ fu s:get_raw_trace(max_dist = 3) abort "{{{2
         "
         " That can happen when we turn a Vim script into a shell heredoc.
         "}}}
-        if msgs[i] =~# '^Error detected while processing \%(command line\.\.script /proc/\d\+/fd/\d\+\)\@!'
+        if msgs[i] =~# '^Error detected while \%(processing\|compiling\)'
+            \ .. ' \%(command line\.\.script /proc/\d\+/fd/\d\+\)\@!'
             \ && msgs[i + 1] =~? '^line\s\+\d\+'
+
+            if msgs[i] =~# '^Error detected while compiling'
+                let compilingError = v:true
+            elseif msgs[i] =~# '^Error detected while processing'
+                let compilingError = v:false
+            endif
 
             " ... then get the line address  in the innermost function where the
             " error occurred
@@ -113,7 +120,7 @@ fu s:get_raw_trace(max_dist = 3) abort "{{{2
 
             " ... and the stack of function calls leading to the error
             let partial_stack = matchstr(msgs[i],
-                \ 'Error detected while processing \%(function \|command line\.\.\)\=\zs.*\ze:$')
+                \ 'Error detected while \%(processing\|compiling\) \%(function \|command line\.\.\)\=\zs.*\ze:$')
 
             " combine `lnum` and `partial_stack` to build a string describing the complete stack
             " Example of value for the `stack` variable:{{{
@@ -203,11 +210,12 @@ fu s:get_raw_trace(max_dist = 3) abort "{{{2
             "     msgs[i + 1] = 'line  42:'
             "     msgs[i + 2] = 'E123: ...'
             ""}}}
-            call add(errors, {
-                \ 'stack': split(stack, '\.\.')
+            call add(errors, #{
+                \ stack: split(stack, '\.\.')
                 \     ->map({_, v -> substitute(v, '^\C\%(function\|script\) ', '', '')})
                 \     ->reverse(),
-                \ 'msg': msgs[i + 2],
+                \ msg: msgs[i + 2],
+                \ type: compilingError ? 'c' : '',
                 \ })
 
             " remember the index of the message in the log where an error occurred
@@ -268,7 +276,7 @@ fu s:build_qfl(errors) abort "{{{2
         let i = 0
 
         " add the error message to the qfl
-        call add(qfl, {'text': err.msg, 'lnum': 0, 'bufnr': 0})
+        call add(qfl, #{text: err.msg, lnum: 0, bufnr: 0})
 
         " Now, we need to add to the qfl, the function calls which lead to the error.{{{
         "
@@ -303,10 +311,13 @@ fu s:build_qfl(errors) abort "{{{2
             " it happens when the error occurred in a sourced file, like
             " a ftplugin (put an invalid command in one of them to reproduce)
             if name =~# '[/.]'
-                call add(qfl, {'text': '', 'filename': name, 'lnum': lnum})
+                call add(qfl, #{text: '', filename: name, lnum: lnum, type: err.type})
                 " there's no chain of calls, the only error comes from this file
                 continue
             else
+                if name =~ '<lambda>\d\+'
+                    let name = '{''' .. name .. '''}'
+                endif
                 " example value:{{{
                 "      ['   function FuncB()',
                 "     \ '    Last set from ~/.vim/vimrc',
@@ -350,10 +361,11 @@ fu s:build_qfl(errors) abort "{{{2
             "
             "     '0. Func[12]'
             "}}}
-            call add(qfl, {
-                \   'text': printf('%s. %s', i, call),
-                \   'filename': src,
-                \   'lnum': lnum,
+            call add(qfl, #{
+                \   text: printf('%s. %s', i, call),
+                \   filename: src,
+                \   lnum: lnum,
+                \   type: err.type,
                 \ })
 
             " increment `i` to update the index of the next function call in the stack
@@ -365,7 +377,7 @@ fu s:build_qfl(errors) abort "{{{2
 endfu
 
 fu s:populate_qfl(qfl) abort "{{{2
-    call setqflist([], ' ', {'items': a:qfl, 'title': 'WTF'})
+    call setqflist([], ' ', #{items: a:qfl, title: 'WTF'})
     " no need to make Vim open the qf window if it's already open
     if &ft isnot# 'qf'
         do <nomodeline> QuickFixCmdPost copen
