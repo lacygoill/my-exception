@@ -12,5 +12,5 @@ let g:loaded_stacktrace = 1
 
 com -bar -nargs=? WTF call stacktrace#main(<q-args> != '' ? <q-args> : 3)
 
-nno <silent><unique> !w :<c-u>call stacktrace#main(v:count ? v:count : 3)<cr>
-nno <silent><unique> !W :<c-u>call stacktrace#main(1000)<cr>
+nno <unique> !w <cmd>call stacktrace#main(v:count ? v:count : 3)<cr>
+nno <unique> !W <cmd>call stacktrace#main(1000)<cr>

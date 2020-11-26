@@ -16,7 +16,7 @@
 " To test  the `stacktrace#qfl()` function,  install the following  `cd` mapping
 " and the `FuncA()`, `FuncB()`, `FuncC()`, `FuncD()` functions:
 "
-"     nno cd :call FuncA()<cr>
+"     nno cd <cmd>call FuncA()<cr>
 "
 "     fu FuncA()
 "         call FuncB()
