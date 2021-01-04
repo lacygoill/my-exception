@@ -382,6 +382,6 @@ fu s:populate_qfl(qfl) abort "{{{2
     if &ft isnot# 'qf'
         do <nomodeline> QuickFixCmdPost copen
     endif
-    sil! call qf#set_matches('stacktrace:populate_qfl', 'Conceal', 'double_bar')
-    sil! call qf#create_matches()
+    sil! call qf#setMatches('stacktrace:populate_qfl', 'Conceal', 'double_bar')
+    sil! call qf#createMatches()
 endfu
