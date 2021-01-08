@@ -148,7 +148,7 @@ fu s:get_raw_trace(max_dist = 3) abort "{{{2
             " manually:
             "
             "     " write this in /tmp/t.vim
-            "     vim9script
+            "     vim9
             "     def FuncA(n: number)
             "         if n == 123
             "             # some comment
