@@ -234,7 +234,7 @@ def GetRawTrace(max_dist = 3): list<dict<any>> #{{{2
 enddef
 
 def BuildQfl(errors: list<dict<any>>): list<dict<any>> #{{{2
-    var qfl = []
+    var qfl: list<dict<any>> = []
 
     # iterate over the errors (there could be only one)
     for err in errors
@@ -360,8 +360,14 @@ def GetFunctionDefinition(name: string): list<string> #{{{2
 enddef
 
 fu GetNumberedFunctionDefinition(name) abort #{{{2
- " `:fu` understands the `{123}` notation only in the legacy context:
+ " `:fu` understands the `{123}` notation only in the legacy context:{{{
  " https://github.com/vim/vim/issues/7634#issuecomment-757001373
+ "
+ " I don't think that's a bug.  Dictionary functions don't work in Vim9.
+ " Instead, we're supposed to use classes (`:h vim9 /^classes`).
+ " We might  still need to  debug a dictionary  function though, so  this legacy
+ " function is necessary.
+ "}}}
     return execute('verb fu {' .. a:name .. '}')
         \ ->split('\n')
 endfu
