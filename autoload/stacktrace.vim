@@ -42,7 +42,7 @@ enddef
 def GetRawTrace(max_dist = 3): list<dict<any>> #{{{2
     # for some reason,  `execute()` sometimes produces 1  or several consecutive
     # empty line(s) even though they aren't there in the output of `:messages`
-    var msgs = execute('messages')->split('\n\+')
+    var msgs: list<string> = execute('messages')->split('\n\+')
 
     # a parseable error needs at least 3 lines
     if len(msgs) < 3
@@ -51,9 +51,9 @@ def GetRawTrace(max_dist = 3): list<dict<any>> #{{{2
 
     # index of the message processed in the  next loop;   we start from the last
     # one because we're interested in the most recent error(s)
-    var i = len(msgs) - 1
+    var i: number = len(msgs) - 1
     # index of the last message where an error occurred
-    var e = -1
+    var e: number = -1
     var errors: list<dict<any>> = []
     # list  of errors built in  the next loop;  each error will be  a dictionary
     # containing 2 keys, whose values will be a stack and a message
@@ -82,10 +82,10 @@ def GetRawTrace(max_dist = 3): list<dict<any>> #{{{2
 
             # ... then get the line address  in the innermost function where the
             # error occurred
-            var lnum = matchstr(msgs[i + 1], '\d\+')->str2nr()
+            var lnum: number = matchstr(msgs[i + 1], '\d\+')->str2nr()
 
             # ... and the stack of function calls leading to the error
-            var partial_stack = matchstr(msgs[i],
+            var partial_stack: string = matchstr(msgs[i],
                 'Error detected while \%(processing\|compiling\) \%(function \|command line\.\.\)\=\zs.*\ze:$')
 
             # combine `lnum` and `partial_stack` to build a string describing the complete stack
@@ -93,12 +93,12 @@ def GetRawTrace(max_dist = 3): list<dict<any>> #{{{2
             #
             #     FuncA[12]..FuncB[34]..FuncC[56]
             #}}}
-            var stack = printf('%s[%d]', partial_stack, lnum)
-            #                     ├──┘{{{
-            #                     └ add the address of the line where the
-            #                       innermost error occurred (ex: 56),
-            #                       inside square brackets (to follow the
-            #                       notation used by Vim for the outer functions)
+            var stack: string = printf('%s[%d]', partial_stack, lnum)
+            #                             ├──┘{{{
+            #                             └ add the address of the line where the
+            #                               innermost error occurred (ex: 56),
+            #                               inside square brackets (to follow the
+            #                               notation used by Vim for the outer functions)
             #}}}
 
             # Now that we have the stack as a string, we need to:{{{
@@ -239,7 +239,7 @@ def BuildQfl(errors: list<dict<any>>): list<dict<any>> #{{{2
     # iterate over the errors (there could be only one)
     for err in errors
         # we use `i` to index the position of a function call in the stack trace
-        var i = 0
+        var i: number = 0
 
         # add the error message to the qfl
         add(qfl, {text: err.msg, lnum: 0, bufnr: 0})
@@ -261,7 +261,7 @@ def BuildQfl(errors: list<dict<any>>): list<dict<any>> #{{{2
         #}}}
         for call in err.stack
             # example value: `FuncB`
-            var name = matchstr(call, '.\{-}\ze\[\d\+\]$')
+            var name: string = matchstr(call, '.\{-}\ze\[\d\+\]$')
 
             # if we don't have a function name, process next function call in the stack
             if empty(name)
@@ -269,7 +269,7 @@ def BuildQfl(errors: list<dict<any>>): list<dict<any>> #{{{2
             endif
 
             # example value: `34`
-            var lnum = matchstr(call, '\[\zs\d\+\ze\]$')->str2nr()
+            var lnum: number = matchstr(call, '\[\zs\d\+\ze\]$')->str2nr()
 
             # if the name of a function contains a slash, or a dot, it's
             # not a function, it's a file
@@ -301,7 +301,8 @@ def BuildQfl(errors: list<dict<any>>): list<dict<any>> #{{{2
             endif
 
             # expand the full path of the source file from which the function call was made
-            var src = matchstr(def[1], 'Last set from \zs.\+\ze line \d\+')->fnamemodify(':p')
+            var src: string = matchstr(def[1], 'Last set from \zs.\+\ze line \d\+')
+                ->fnamemodify(':p')
             # if it's not readable,  we won't be able to visit  it from the qfl,
             # so, again, process next function call in the stack
             if !filereadable(src)
