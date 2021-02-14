@@ -1,4 +1,4 @@
-vim9 noclear
+vim9script noclear
 
 if exists('loaded') | finish | endif
 var loaded = true
@@ -114,7 +114,7 @@ def GetRawTrace(max_dist = 3): list<dict<any>> #{{{2
             # manually:
             #
             #     " write this in /tmp/t.vim
-            #     vim9
+            #     vim9script
             #     def FuncA(n: number)
             #         if n == 123
             #             # some comment

@@ -1,8 +1,8 @@
-vim9
+vim9script
 
 # Regular errors:{{{
 #
-#     vim9
+#     vim9script
 #     nno cd <cmd>call <sid>FuncA()<cr>
 #
 #     def FuncA()
@@ -28,7 +28,7 @@ vim9
 #}}}
 # Error in lambda:{{{
 #
-#     vim9
+#     vim9script
 #     nno cd <cmd>call <sid>FuncA()<cr>
 #
 #     def FuncA()
