@@ -178,7 +178,7 @@ def GetRawTrace(max_dist = 3): list<dict<any>> #{{{2
             #"}}}
             add(errors, {
                 stack: split(stack, '\.\.')
-                    ->map((_, v) => substitute(v, '^\C\%(function\|script\) ', '', ''))
+                    ->map((_, v: string): string => substitute(v, '^\C\%(function\|script\) ', '', ''))
                     ->reverse(),
                 msg: msgs[i + 2],
                 type: compiling_error ? 'c' : '',
