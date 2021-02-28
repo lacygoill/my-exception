@@ -54,7 +54,7 @@ def GetRawTrace(max_dist = 3): list<dict<any>> #{{{2
     var i: number = len(msgs) - 1
     # index of the last message where an error occurred
     var e: number = -1
-    var errors: list<dict<any>> = []
+    var errors: list<dict<any>>
     # list  of errors built in  the next loop;  each error will be  a dictionary
     # containing 2 keys, whose values will be a stack and a message
 
@@ -234,7 +234,7 @@ def GetRawTrace(max_dist = 3): list<dict<any>> #{{{2
 enddef
 
 def BuildQfl(errors: list<dict<any>>): list<dict<any>> #{{{2
-    var qfl: list<dict<any>> = []
+    var qfl: list<dict<any>>
 
     # iterate over the errors (there could be only one)
     for err in errors
@@ -350,7 +350,7 @@ def PopulateQfl(qfl: list<dict<any>>) #{{{2
     sil! qf#setMatches('stacktrace:PopulateQfl', 'Conceal', 'double_bar')
     sil! qf#createMatches()
 enddef
-
+#}}}1
 # Utilities {{{1
 def GetFunctionDefinition(name: string): list<string> #{{{2
     # legacy numbered/dictionary functions (see `:h eval /{42}`)
