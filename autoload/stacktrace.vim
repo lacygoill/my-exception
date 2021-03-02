@@ -177,12 +177,14 @@ def GetRawTrace(max_dist = 3): list<dict<any>> #{{{2
             #     msgs[i + 2] = 'E123: ...'
             #"}}}
             add(errors, {
-                stack: split(stack, '\.\.')
-                    ->map((_, v: string): string => substitute(v, '^\C\%(function\|script\) ', '', ''))
-                    ->reverse(),
+                stack: stack
+                     ->split('\.\.')
+                     ->map((_, v: string): string =>
+                             v->substitute('^\C\%(function\|script\) ', '', ''))
+                     ->reverse(),
                 msg: msgs[i + 2],
                 type: compiling_error ? 'c' : '',
-                })
+            })
 
             # remember the index of the message in the log where an error occurred
             e = i
