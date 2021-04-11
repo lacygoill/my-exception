@@ -1,7 +1,7 @@
 vim9script
 
 def Func()
-    timer_start(0, () => execute('invalid'))
+    timer_start(0, (_) => execute('invalid'))
 enddef
 #}}}
 Func()

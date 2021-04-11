@@ -333,7 +333,7 @@ def BuildQfl(errors: list<dict<any>>): list<dict<any>> #{{{2
                   filename: src,
                   lnum: lnum,
                   type: err.type,
-                })
+            })
 
             # increment `i` to update the index of the next function call in the stack
             i += 1
