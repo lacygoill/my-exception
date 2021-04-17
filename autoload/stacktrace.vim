@@ -71,7 +71,7 @@ def GetRawTrace(max_dist = 3): list<dict<any>> #{{{2
         #}}}
         if msgs[i] =~ '^Error detected while \%(processing\|compiling\)'
             .. ' \%(command line\.\.script /proc/\d\+/fd/\d\+\)\@!'
-            && msgs[i + 1] =~? '^line\s\+\d\+'
+            && msgs[i + 1] =~ '^\cline\s\+\d\+'
 
             var compiling_error: bool
             if msgs[i] =~ '^Error detected while compiling'
