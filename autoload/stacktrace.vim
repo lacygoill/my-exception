@@ -35,7 +35,7 @@ def stacktrace#main(lvl: number) #{{{2
         return
     endif
 
-    PopulateQfl(qfl)
+    SetQfl(qfl)
 enddef
 #}}}1
 # Core {{{1
@@ -82,11 +82,12 @@ def GetRawTrace(max_dist = 3): list<dict<any>> #{{{2
 
             # ... then get the line address  in the innermost function where the
             # error occurred
-            var lnum: number = matchstr(msgs[i + 1], '\d\+')->str2nr()
+            var lnum: number = msgs[i + 1]->matchstr('\d\+')->str2nr()
 
             # ... and the stack of function calls leading to the error
-            var partial_stack: string = matchstr(msgs[i],
-                'Error detected while \%(processing\|compiling\) \%(function \|command line\.\.\)\=\zs.*\ze:$')
+            var partial_stack: string = msgs[i]
+                ->matchstr('Error detected while \%(processing\|compiling\)'
+                        .. ' \%(function \|command line\.\.\)\=\zs.*\ze:$')
 
             # combine `lnum` and `partial_stack` to build a string describing the complete stack
             # Example of value for the `stack` variable:{{{
@@ -154,7 +155,7 @@ def GetRawTrace(max_dist = 3): list<dict<any>> #{{{2
             #     Error detected while processing FileType Autocommands for "*"
             #     ..Syntax Autocommands for "*"
             #     ..function <SNR>20_SynSet[25]
-            #     ..script /home/user/.vim/plugged/vim-vim/after/syntax/vim.vim:
+            #     ..script ~/.vim/pack/mine/opt/vim/after/syntax/vim.vim:
             #       ^-----^
             #       noise
             #
@@ -191,7 +192,7 @@ def GetRawTrace(max_dist = 3): list<dict<any>> #{{{2
         endif
 
         # in the next iteration of the loop, process previous message
-        i -= 1
+        --i
 
         if e != -1 && e - i > max_dist
         #  ├─────┘    ├──────────────┘{{{
@@ -263,7 +264,7 @@ def BuildQfl(errors: list<dict<any>>): list<dict<any>> #{{{2
         #}}}
         for call in err.stack
             # example value: `FuncB`
-            var name: string = matchstr(call, '.\{-}\ze\[\d\+\]$')
+            var name: string = call->matchstr('.\{-}\ze\[\d\+\]$')
 
             # if we don't have a function name, process next function call in the stack
             if empty(name)
@@ -271,7 +272,7 @@ def BuildQfl(errors: list<dict<any>>): list<dict<any>> #{{{2
             endif
 
             # example value: `34`
-            var lnum: number = matchstr(call, '\[\zs\d\+\ze\]$')->str2nr()
+            var lnum: number = call->matchstr('\[\zs\d\+\ze\]$')->str2nr()
 
             # if the name of a function contains a slash, or a dot, it's
             # not a function, it's a file
@@ -303,14 +304,17 @@ def BuildQfl(errors: list<dict<any>>): list<dict<any>> #{{{2
             endif
 
             # expand the full path of the source file from which the function call was made
-            var src: string = matchstr(def[1], 'Last set from \zs.\+\ze line \d\+')
+            var src: string = def[1]
+                ->matchstr('Last set from \zs.\+\ze line \d\+')
                 ->fnamemodify(':p')
             # if it's not readable,  we won't be able to visit  it from the qfl,
             # so, again, process next function call in the stack
             if !filereadable(src)
                 continue
             endif
-            lnum += matchstr(def[1], 'Last set from .\+ line \zs\d\+')->str2nr()
+            lnum += def[1]
+                ->matchstr('Last set from .\+ line \zs\d\+')
+                ->str2nr()
 
             # Finally, we can add an entry for the function call.{{{
             #
@@ -336,20 +340,20 @@ def BuildQfl(errors: list<dict<any>>): list<dict<any>> #{{{2
             })
 
             # increment `i` to update the index of the next function call in the stack
-            i += 1
+            ++i
         endfor
     endfor
 
     return qfl
 enddef
 
-def PopulateQfl(qfl: list<dict<any>>) #{{{2
+def SetQfl(qfl: list<dict<any>>) #{{{2
     setqflist([], ' ', {items: qfl, title: 'WTF'})
     # no need to make Vim open the qf window if it's already open
-    if &ft != 'qf'
+    if &filetype != 'qf'
         do <nomodeline> QuickFixCmdPost copen
     endif
-    sil! qf#setMatches('stacktrace:PopulateQfl', 'Conceal', 'double_bar')
+    sil! qf#setMatches('stacktrace:SetQfl', 'Conceal', 'double_bar')
     sil! qf#createMatches()
 enddef
 #}}}1
