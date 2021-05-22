@@ -130,21 +130,21 @@ def GetRawTrace(max_dist = 3): list<dict<any>> #{{{2
             #     $ vim /tmp/t.vim
             #     :so%
             #
-            #     Error detected while processing /tmp/d.vim[11]..function <SNR>185_FuncA:~
+            #     Error detected while processing /tmp/d.vim[11]..function <SNR>185_FuncA:˜
             #                                                     ^-------^
             #                                                     noise which must be removed
             #
             # Same  thing for  a  command executed  via  the shell  command-line
             # (also, think about a script turned into a shell heredoc):
             #
-            #     Error detected while processing command line..script /proc/32041/fd/11[11]..function <SNR>151_FuncA:~
+            #     Error detected while processing command line..script /proc/32041/fd/11[11]..function <SNR>151_FuncA:˜
             #                                                                                 ^-------^
             #
             # When an error  is raised from a function which  was not called via
             # the command-line nor a  sourced script (mapping, command, autocmd,
             # ...), we don't need to remove anything:
             #
-            #     Error detected while processing function FuncA[2]..FuncC[1]..<SNR>151_FuncD:~
+            #     Error detected while processing function FuncA[2]..FuncC[1]..<SNR>151_FuncD:˜
             #                                     ^-------^
             #                                     no need to remove this; we didn't extract it
             #
