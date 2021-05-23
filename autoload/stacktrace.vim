@@ -177,7 +177,7 @@ def GetRawTrace(max_dist = 3): list<dict<any>> #{{{2
             #     msgs[i + 1] = 'line  42:'
             #     msgs[i + 2] = 'E123: ...'
             #"}}}
-            add(errors, {
+            errors->add({
                 stack: stack
                      ->split('\.\.')
                      ->map((_, v: string): string =>
@@ -245,7 +245,7 @@ def BuildQfl(errors: list<dict<any>>): list<dict<any>> #{{{2
         var i: number = 0
 
         # add the error message to the qfl
-        add(qfl, {text: err.msg, lnum: 0, bufnr: 0})
+        qfl->add({text: err.msg, lnum: 0, bufnr: 0})
 
         # Now, we need to add to the qfl, the function calls which lead to the error.{{{
         #
@@ -281,7 +281,7 @@ def BuildQfl(errors: list<dict<any>>): list<dict<any>> #{{{2
             # a ftplugin (put an invalid command in one of them to reproduce)
             var def: list<string>
             if name =~ '[/.]'
-                add(qfl, {text: '', filename: name, lnum: lnum, type: err.type})
+                qfl->add({text: '', filename: name, lnum: lnum, type: err.type})
                 # there's no chain of calls, the only error comes from this file
                 continue
             else
@@ -332,7 +332,7 @@ def BuildQfl(errors: list<dict<any>>): list<dict<any>> #{{{2
             #
             #     '0. Func[12]'
             #}}}
-            add(qfl, {
+            qfl->add({
                   text: printf('%s. %s', i, call),
                   filename: src,
                   lnum: lnum,
