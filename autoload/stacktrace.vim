@@ -97,7 +97,7 @@ def GetRawTrace(max_dist = 3): list<dict<any>> #{{{2
             var stack: string = printf('%s[%d]', partial_stack, lnum)
             #                             ├──┘{{{
             #                             └ add the address of the line where the
-            #                               innermost error occurred (ex: 56),
+            #                               innermost error occurred (e.g.: 56),
             #                               inside square brackets (to follow the
             #                               notation used by Vim for the outer functions)
             #}}}
@@ -299,7 +299,7 @@ def BuildQfl(errors: list<dict<any>>): list<dict<any>> #{{{2
             # if  the function  definition doesn't  have at  least 2  lines, the
             # information we need isn't there, so don't bother creating an entry
             # in the qfl for it; instead process next function call in the stack
-            if len(def) < 2
+            if def->len() < 2
                 continue
             endif
 
@@ -324,7 +324,7 @@ def BuildQfl(errors: list<dict<any>>): list<dict<any>> #{{{2
             #
             #     printf('%s. %s', i, call),
             #             │   │
-            #             │   └ function call; ex: 'FuncA[12]'
+            #             │   └ function call; e.g.: 'FuncA[12]'
             #             └ index of the function call in the stack
             #               the lower, the deeper
             #
