@@ -128,7 +128,7 @@ def GetRawTrace(max_dist = 3): list<dict<any>> #{{{2
             #     FuncA(123)
             #
             #     $ vim /tmp/t.vim
-            #     :so%
+            #     :source %
             #
             #     Error detected while processing /tmp/d.vim[11]..function <SNR>185_FuncA:˜
             #                                                     ^-------^
@@ -351,31 +351,31 @@ def SetQfl(qfl: list<dict<any>>) #{{{2
     setqflist([], ' ', {items: qfl, title: 'WTF'})
     # no need to make Vim open the qf window if it's already open
     if &filetype != 'qf'
-        do <nomodeline> QuickFixCmdPost copen
+        doautocmd <nomodeline> QuickFixCmdPost copen
     endif
-    sil! qf#setMatches('stacktrace:SetQfl', 'Conceal', 'double_bar')
-    sil! qf#createMatches()
+    silent! qf#setMatches('stacktrace:SetQfl', 'Conceal', 'double_bar')
+    silent! qf#createMatches()
 enddef
 #}}}1
 # Utilities {{{1
 def GetFunctionDefinition(name: string): list<string> #{{{2
-    # legacy numbered/dictionary functions (see `:h eval /{42}`)
+    # legacy numbered/dictionary functions (see `:help eval /{42}`)
     if name =~ '^\d\+$'
         return GetNumberedFunctionDefinition(name)
     endif
-    return execute('verb function ' .. name, 'silent!')->split('\n')
+    return execute('verbose function ' .. name, 'silent!')->split('\n')
 enddef
 
-fu GetNumberedFunctionDefinition(name) abort #{{{2
- " `:fu` understands the `{123}` notation only in the legacy context:{{{
+function GetNumberedFunctionDefinition(name) abort #{{{2
+ " `:function` understands the `{123}` notation only in the legacy context:{{{
  " https://github.com/vim/vim/issues/7634#issuecomment-757001373
  "
  " I don't think that's a bug.  Dictionary functions don't work in Vim9.
- " Instead, we're supposed to use classes (`:h vim9 /^classes`).
+ " Instead, we're supposed to use classes (`:help vim9 /^classes`).
  " We might  still need to  debug a dictionary  function though, so  this legacy
  " function is necessary.
  "}}}
-    return execute('verb fu {' .. a:name .. '}')
+    return execute('verbose function {' .. a:name .. '}')
         \ ->split('\n')
-endfu
+endfunction
 

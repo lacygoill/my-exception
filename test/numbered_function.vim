@@ -1,7 +1,7 @@
 let mydict = {'data': [0, 1, 2, 3]}
-fu mydict.len()
+function mydict.len()
     invalid
     return len(self.data)
-endfu
+endfunction
 echo mydict.len()
 
