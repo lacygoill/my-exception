@@ -1,8 +1,5 @@
 vim9script noclear
 
-if exists('loaded') | finish | endif
-var loaded = true
-
 # Interface {{{1
 def stacktrace#main(lvl: number) #{{{2
     # example value for `errors`:{{{
@@ -114,7 +111,7 @@ def GetRawTrace(max_dist = 3): list<dict<any>> #{{{2
             # It may be necessary when the error is raised from a script sourced
             # manually:
             #
-            #     " write this in /tmp/t.vim
+            #     # write this in /tmp/t.vim
             #     vim9script
             #     def FuncA(n: number)
             #         if n == 123
@@ -176,11 +173,11 @@ def GetRawTrace(max_dist = 3): list<dict<any>> #{{{2
             #     msgs[i] = 'Error detected while processing ...:'
             #     msgs[i + 1] = 'line  42:'
             #     msgs[i + 2] = 'E123: ...'
-            #"}}}
+            #}}}
             errors->add({
                 stack: stack
                      ->split('\.\.')
-                     ->map((_, v: string): string =>
+                     ->map((_, v: string) =>
                              v->substitute('^\C\%(function\|script\) ', '', ''))
                      ->reverse(),
                 msg: msgs[i + 2],
@@ -228,7 +225,7 @@ def GetRawTrace(max_dist = 3): list<dict<any>> #{{{2
             #     Error detected while processing function baz   <+
             #     line    34:
             #     E492: Not an editor command:     qux
-            #"}}}
+            #}}}
         endif
     endwhile
 
@@ -286,12 +283,12 @@ def BuildQfl(errors: list<dict<any>>): list<dict<any>> #{{{2
                 continue
             else
                 # example value:{{{
-                #      ['   function FuncB()',
+                #      ['   def FuncB()',
                 #       '    Last set from ~/.vim/vimrc',
                 #       ...,
                 #       '34    abcd',
                 #       ...,
-                #       '   endfunction']
+                #       '   enddef']
                 #}}}
                 def = GetFunctionDefinition(name)
             endif
