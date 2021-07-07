@@ -237,7 +237,7 @@ def BuildQfl(errors: list<dict<any>>): list<dict<any>> #{{{2
     var qfl: list<dict<any>>
 
     # iterate over the errors (there could be only one)
-    for err in errors
+    for err: dict<any> in errors
         # we use `i` to index the position of a function call in the stack trace
         var i: number = 0
 
@@ -259,7 +259,7 @@ def BuildQfl(errors: list<dict<any>>): list<dict<any>> #{{{2
         #
         #     'FuncB[34]'
         #}}}
-        for call in err.stack
+        for call: string in err.stack
             # example value: `FuncB`
             var name: string = call->matchstr('.\{-}\ze\[\d\+\]$')
 
