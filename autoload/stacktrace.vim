@@ -106,60 +106,6 @@ def GetRawTrace(max_dist = 3): list<dict<any>> #{{{2
             #    3. add the associated error message to the dictionary
             #    4. add the dictionary to a list of all errors found so far
             #}}}
-            # Why the `map(... substitute(...))`?{{{
-            #
-            # It may be necessary when the error is raised from a script sourced
-            # manually:
-            #
-            #     # write this in /tmp/t.vim
-            #     vim9script
-            #     def FuncA(n: number)
-            #         if n == 123
-            #             # some comment
-            #             FuncB('string')
-            #         endif
-            #     enddef
-            #     def FuncB(n: number)
-            #         echo n
-            #     enddef
-            #     FuncA(123)
-            #
-            #     $ vim /tmp/t.vim
-            #     :source %
-            #
-            #     Error detected while processing /tmp/d.vim[11]..function <SNR>185_FuncA:˜
-            #                                                     ^-------^
-            #                                                     noise which must be removed
-            #
-            # Same  thing for  a  command executed  via  the shell  command-line
-            # (also, think about a script turned into a shell heredoc):
-            #
-            #     Error detected while processing command line..script /proc/32041/fd/11[11]..function <SNR>151_FuncA:˜
-            #                                                                                 ^-------^
-            #
-            # When an error  is raised from a function which  was not called via
-            # the command-line nor a  sourced script (mapping, command, autocmd,
-            # ...), we don't need to remove anything:
-            #
-            #     Error detected while processing function FuncA[2]..FuncC[1]..<SNR>151_FuncD:˜
-            #                                     ^-------^
-            #                                     no need to remove this; we didn't extract it
-            #
-            # ---
-            #
-            # For a similar reason, we may need to remove the word `script`:
-            #
-            #     Error detected while processing FileType Autocommands for "*"
-            #     ..Syntax Autocommands for "*"
-            #     ..function <SNR>20_SynSet[25]
-            #     ..script ~/.vim/pack/mine/opt/vim/after/syntax/vim.vim:
-            #       ^-----^
-            #       noise
-            #
-            # Note that  in this example,  the message is artificially  split on
-            # multiple  lines,  to improve  the  readability.   In a  real  case
-            # scenarion, everything is given in a single message line.
-            #}}}
             # Example of value for the `stack` key: {{{
             #
             #     ['FuncA[12]', 'FuncB[34]', 'FuncC[56]']
@@ -177,6 +123,60 @@ def GetRawTrace(max_dist = 3): list<dict<any>> #{{{2
             errors->add({
                 stack: stack
                      ->split('\.\.')
+                     # Might be necessary when the error is raised from a script sourced manually:{{{
+                     #
+                     #     # write this in /tmp/t.vim
+                     #     vim9script
+                     #     def FuncA(n: number)
+                     #         if n == 123
+                     #             # some comment
+                     #             FuncB('string')
+                     #         endif
+                     #     enddef
+                     #     def FuncB(n: number)
+                     #         echo n
+                     #     enddef
+                     #     FuncA(123)
+                     #
+                     #     $ vim /tmp/t.vim
+                     #     :source %
+                     #
+                     #     Error detected while processing /tmp/d.vim[11]..function <SNR>185_FuncA:˜
+                     #                                                     ^-------^
+                     #                                                     noise which must be removed
+                     #
+                     # Same  thing   for  a  command  executed   via  the  shell
+                     # command-line (also,  think about  a script turned  into a
+                     # shell heredoc):
+                     #
+                     #     Error detected while processing command line..script /proc/32041/fd/11[11]..function <SNR>151_FuncA:˜
+                     #                                                                                 ^-------^
+                     #
+                     # When  an  error  is  raised from  a  function  which  was
+                     # not  called via  the  command-line nor  a sourced  script
+                     # (mapping, command, autocmd, ...), we don't need to remove
+                     # anything:
+                     #
+                     #     Error detected while processing function FuncA[2]..FuncC[1]..<SNR>151_FuncD:˜
+                     #                                     ^-------^
+                     #                                     no need to remove this; we didn't extract it
+                     #
+                     # ---
+                     #
+                     # For a similar reason, we may need to remove the word `script`:
+                     #
+                     #     Error detected while processing FileType Autocommands for "*"
+                     #     ..Syntax Autocommands for "*"
+                     #     ..function <SNR>20_SynSet[25]
+                     #     ..script ~/.vim/pack/mine/opt/vim/after/syntax/vim.vim:
+                     #       ^-----^
+                     #       noise
+                     #
+                     # Note that  in this  example, the message  is artificially
+                     # split on multiple lines,  to improve the readability.  In
+                     # a real  case scenarion, everything  is given in  a single
+                     # message line.
+                     #}}}
                      ->map((_, v: string) =>
                              v->substitute('^\C\%(function\|script\) ', '', ''))
                      ->reverse(),
